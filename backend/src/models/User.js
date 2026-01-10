@@ -28,6 +28,22 @@ const userSchema = new mongoose.Schema(
     verifiedBadges: [{ type: String }],
     totalTrips: { type: Number, default: 0 },
     yearsOfExperience: { type: Number, default: 0 },
+
+    // Financial & Onboarding Info
+    bankDetails: {
+      accountNumber: { type: String },
+      ifscCode: { type: String },
+      bankName: { type: String },
+      holderName: { type: String }
+    },
+    onboardingStatus: { type: String, enum: ['INCOMPLETE', 'DOCUMENT_SUBMITTED', 'VERIFIED'], default: 'INCOMPLETE' },
+    documents: {
+      aadhaarFront: { type: String }, // Store URL/Path
+      aadhaarBack: { type: String },
+      licenseFront: { type: String },
+      licenseBack: { type: String },
+      panCard: { type: String }
+    }
   },
   { timestamps: true }
 )

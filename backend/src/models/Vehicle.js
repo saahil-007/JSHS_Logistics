@@ -26,6 +26,19 @@ const vehicleSchema = new mongoose.Schema(
     currentFuelLiters: { type: Number, default: 100 },
     fuelThresholdLowLiters: { type: Number, default: 15 },
 
+    lastServiceOdometerKm: { type: Number, default: 0 },
+    serviceThresholdKm: { type: Number, default: 500 }, // Service every 500km
+
+    insuranceDetails: {
+      policyNumber: { type: String },
+      expiryDate: { type: Date },
+      provider: { type: String }
+    },
+    registrationDetails: {
+      registrationDate: { type: Date },
+      ownerName: { type: String }
+    },
+
     isRefrigerated: { type: Boolean, default: false },
     currentTemperatureC: { type: Number },
     temperatureThresholdMaxC: { type: Number, default: -15 }, // Set Alert if above this

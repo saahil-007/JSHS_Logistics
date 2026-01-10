@@ -616,30 +616,47 @@ export async function deliverShipment(req, res) {
   if (shipment.assignedVehicleId) {
     const v = await Vehicle.findById(shipment.assignedVehicleId)
     if (v) {
-      v.odometerKm = Math.round((v.odometerKm + (shipment.distanceKm ?? 0)) * 100) / 100
+      const distanceGained = shipment.distanceKm ?? 0
+      v.odometerKm = Math.round((v.odometerKm + distanceGained) * 100) / 100
 
-      const remaining = v.nextServiceAtKm - v.odometerKm
-      if (remaining <= 0) {
-        v.status = 'MAINTENANCE'
-      } else if (v.status === 'IN_USE') {
-        v.status = 'AVAILABLE'
+      // Calculate distance since last service
+      const distanceSinceService = v.odometerKm - (v.lastServiceOdometerKm || 0)
+      const isDue = distanceSinceService >= (v.serviceThresholdKm || 500)
+
+      if (v.status === 'IN_USE') {
+        v.status = 'AVAILABLE' // Vacant now
       }
 
-      await v.save()
+      // If due and now vacant, mark for maintenance
+      if (isDue && v.status === 'AVAILABLE') {
+        v.status = 'MAINTENANCE'
 
-      if (remaining <= 500) {
-        // Notification for Fleet Manager (in this simplified model we notify any MANAGER)
+        // Notification for Manager
         const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
         if (manager?._id) {
           await createNotification({
             userId: manager._id,
-            message: remaining <= 0 ? `Vehicle ${v.plateNumber} is due for service now.` : `Vehicle ${v.plateNumber} service due soon (${Math.round(remaining)} km).`,
+            message: `URGENT: Vehicle ${v.plateNumber} reached ${Math.round(distanceSinceService)}km since last service and is now vacant. Marked for MAINTENANCE.`,
+            type: 'MAINTENANCE',
+            severity: 'CRITICAL',
+            metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
+          })
+        }
+      } else if (isDue) {
+        // Notification that it WILL need maintenance once vacant if it wasn't already marked
+        const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
+        if (manager?._id) {
+          await createNotification({
+            userId: manager._id,
+            message: `Vehicle ${v.plateNumber} has exceeded service limit (${Math.round(distanceSinceService)}km). It will be marked for maintenance once current task is finished.`,
             type: 'MAINTENANCE',
             severity: 'WARNING',
-            metadata: { vehicleId: v._id },
+            metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
           })
         }
       }
+
+      await v.save()
     }
   }
 

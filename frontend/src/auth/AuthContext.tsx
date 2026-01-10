@@ -17,6 +17,17 @@ export type User = {
   phone: string
   role: Role
   driverApprovalStatus?: DriverApprovalStatus
+  onboardingStatus?: string
+  bankDetails?: {
+    accountNumber?: string
+    ifscCode?: string
+    bankName?: string
+    holderName?: string
+  }
+  performanceRating?: number
+  awards?: string[]
+  licenseNumber?: string
+  createdAt?: string
 }
 
 type RegisterPayload = {

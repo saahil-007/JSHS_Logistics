@@ -19,6 +19,7 @@ import Skeleton from '../../components/Skeleton'
 import { FileText, CheckCircle2, Zap, Navigation, BarChart3, MapPin, Settings, Radio, Trash2, Shield, Plus, Upload, Package, Clock, Star, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Modal from '../../components/Modal'
+import ReviewModal from '../../components/ReviewModal'
 
 type Driver = { _id: string; name: string; email: string; role: string }
 type Vehicle = { _id: string; plateNumber: string; model?: string; status: string }
@@ -50,6 +51,7 @@ export default function ShipmentDetail() {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
   const [otpInput, setOtpInput] = useState('')
   const [otpType, setOtpType] = useState<'START' | 'COMPLETE' | null>(null)
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
 
   const shipmentData = useShipmentData(id);
 
@@ -97,6 +99,19 @@ export default function ShipmentDetail() {
     },
     enabled: !!id,
     refetchInterval: () => simStatusQuery.data?.running ? 5000 : false
+  })
+
+  const reviewQuery = useQuery({
+    queryKey: ['shipment-review', id],
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/reviews/shipment/${id}`)
+        return res.data.review
+      } catch {
+        return null
+      }
+    },
+    enabled: !!id,
   })
 
   useEffect(() => {
@@ -416,6 +431,17 @@ export default function ShipmentDetail() {
         </div>
       </Modal>
 
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        shipmentId={shipment._id}
+        driverId={typeof shipment.assignedDriverId === 'object' ? (shipment.assignedDriverId as any)._id : shipment.assignedDriverId}
+        onSuccess={() => {
+          setIsReviewModalOpen(false);
+          reviewQuery.refetch();
+        }}
+      />
+
       {/* Premium Role-Specific Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-5">
@@ -454,6 +480,17 @@ export default function ShipmentDetail() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Customer Rating Prompt */}
+          {user?.role === 'CUSTOMER' && shipment.status === 'DELIVERED' && shipment.paymentStatus === 'PAID' && !reviewQuery.data && (
+            <button
+              onClick={() => setIsReviewModalOpen(true)}
+              className="btn-primary bg-amber-500 hover:bg-amber-600 shadow-amber-500/20 flex items-center gap-2"
+            >
+              <Star className="h-4 w-4" />
+              Rate Driver Performance
+            </button>
+          )}
+
           {/* Manager Specific Actions */}
           {isManagerPortal && (
             <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10">
@@ -579,7 +616,15 @@ export default function ShipmentDetail() {
           {(user?.role === 'CUSTOMER' || isManagerPortal) && shipment.assignedDriverId && typeof shipment.assignedDriverId === 'object' && (
             <div className="glass-card bg-slate-900 text-white border-none p-6 shadow-2xl relative overflow-hidden group">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all" />
-              <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">Assigned Logistics Elite</label>
+              <div className="flex justify-between items-start mb-4">
+                <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] block">Assigned Logistics Elite</label>
+                {reviewQuery.data && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400">
+                    <Star className="h-3 w-3 fill-current" />
+                    <span className="text-[10px] font-black">RATED {reviewQuery.data.rating}/5</span>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-4 mb-6">
                 <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-2xl font-black shadow-lg shadow-blue-500/20 border border-white/10">
                   {(shipment.assignedDriverId as any).name[0]}

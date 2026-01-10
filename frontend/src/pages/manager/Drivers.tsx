@@ -20,6 +20,13 @@ export default function Drivers() {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null)
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+    const [onboardingForm, setOnboardingForm] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        bankDetails: { accountNumber: '', ifscCode: '', bankName: '', holderName: '' },
+        licenseNumber: ''
+    })
 
     const driversQ = useQuery({
         queryKey: ['fleetDrivers'],
@@ -212,25 +219,72 @@ export default function Drivers() {
                 </div>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Onboard New Driver">
-                <form onSubmit={(e) => {
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Comprehensive Driver Onboarding">
+                <form onSubmit={async (e) => {
                     e.preventDefault();
-                    setIsModalOpen(false);
-                    // In a real app, this would call an API
-                    alert('Invitation sent successfully!');
-                }} className="space-y-4">
-                    <p className="text-sm text-slate-500">
-                        Drivers should ideally register using the mobile app or registration page to link their accounts. However, you can generate an invite link or pre-register a profile.
-                    </p>
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500 uppercase">Driver Email</label>
-                        <input required type="email" placeholder="driver@email.com" className="input-glass" />
+                    try {
+                        await api.post('/fleet/drivers/onboard', onboardingForm);
+                        setIsModalOpen(false);
+                        driversQ.refetch();
+                        alert('Driver onboarded successfully!');
+                    } catch (err) {
+                        alert('Failed to onboard driver');
+                    }
+                }} className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase">Full Name</label>
+                            <input required value={onboardingForm.name} onChange={e => setOnboardingForm({ ...onboardingForm, name: e.target.value })} placeholder="John Doe" className="input-glass" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase">Email Address</label>
+                            <input required type="email" value={onboardingForm.email} onChange={e => setOnboardingForm({ ...onboardingForm, email: e.target.value })} placeholder="john@example.com" className="input-glass" />
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500 uppercase">Invitation Message</label>
-                        <textarea placeholder="Welcome to the fleet!" className="input-glass h-24" />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
+                            <input required value={onboardingForm.phone} onChange={e => setOnboardingForm({ ...onboardingForm, phone: e.target.value })} placeholder="+91 98765 43210" className="input-glass" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase">License Number</label>
+                            <input required value={onboardingForm.licenseNumber} onChange={e => setOnboardingForm({ ...onboardingForm, licenseNumber: e.target.value })} placeholder="DL-XXXXXXXXXXXX" className="input-glass" />
+                        </div>
                     </div>
-                    <button type="submit" className="btn-primary w-full py-3">Send Invitation</button>
+
+                    <div className="border-t border-slate-100 dark:border-white/5 pt-4">
+                        <label className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block mb-4">Financial Details (Bank Account)</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500 uppercase">Account Holder</label>
+                                <input value={onboardingForm.bankDetails.holderName} onChange={e => setOnboardingForm({ ...onboardingForm, bankDetails: { ...onboardingForm.bankDetails, holderName: e.target.value } })} placeholder="Full Name as per Bank" className="input-glass" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500 uppercase">Bank Name</label>
+                                <input value={onboardingForm.bankDetails.bankName} onChange={e => setOnboardingForm({ ...onboardingForm, bankDetails: { ...onboardingForm.bankDetails, bankName: e.target.value } })} placeholder="SBI, HDFC, etc." className="input-glass" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500 uppercase">Account Number</label>
+                                <input value={onboardingForm.bankDetails.accountNumber} onChange={e => setOnboardingForm({ ...onboardingForm, bankDetails: { ...onboardingForm.bankDetails, accountNumber: e.target.value } })} placeholder="0000 0000 0000" className="input-glass" />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-500 uppercase">IFSC Code</label>
+                                <input value={onboardingForm.bankDetails.ifscCode} onChange={e => setOnboardingForm({ ...onboardingForm, bankDetails: { ...onboardingForm.bankDetails, ifscCode: e.target.value } })} placeholder="SBIN0001234" className="input-glass" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl flex gap-3">
+                        <Shield className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                        <p className="text-[10px] text-blue-700 dark:text-blue-300">
+                            By onboarding, the driver will receive a temporary password via email to complete their document verification (Aadhaar, PAN, License Photos) through the mobile app.
+                        </p>
+                    </div>
+
+                    <button type="submit" className="btn-primary w-full py-4 text-base font-black">Finalize Onboarding</button>
                 </form>
             </Modal>
 

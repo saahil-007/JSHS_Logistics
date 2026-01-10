@@ -7,9 +7,12 @@ import { connectDb } from './config/db.js'
 import { runDbMigrations } from './config/dbMigrations.js'
 import { registerSocketHandlers } from './sockets/index.js'
 import { setIO } from './sockets/io.js'
+import { startScheduler } from './services/schedulerService.js'
 
 await connectDb()
 await runDbMigrations()
+
+startScheduler()
 
 const server = http.createServer(app)
 

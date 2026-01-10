@@ -131,6 +131,17 @@ export type Vehicle = {
   capacityKg: number
   type: 'TRUCK_LG' | 'TRUCK_SM' | 'VAN' | 'BIKE'
   fuelType: 'DIESEL' | 'PETROL' | 'ELECTRIC' | 'CNG'
+  lastServiceOdometerKm?: number
+  serviceThresholdKm?: number
+  registrationDetails?: {
+    registrationDate?: string
+    ownerName?: string
+  }
+  insuranceDetails?: {
+    policyNumber?: string
+    expiryDate?: string
+    provider?: string
+  }
   createdAt: string
   updatedAt: string
 }

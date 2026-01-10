@@ -28,3 +28,13 @@ export async function markRead(req, res) {
   await n.save()
   res.json({ notification: n })
 }
+
+export async function resolveNotification(req, res) {
+  try {
+    const { resolveIotAlert } = await import('../services/iotService.js')
+    const n = await resolveIotAlert(req.params.id, req.user._id)
+    res.json({ notification: n })
+  } catch (error) {
+    res.status(400).json({ error: { message: error.message } })
+  }
+}

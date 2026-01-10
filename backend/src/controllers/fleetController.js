@@ -132,3 +132,52 @@ export async function getDriverProfile(req, res) {
 
   res.json({ driver })
 }
+
+export async function onboardDriver(req, res) {
+  const { name, email, phone, licenseNumber, bankDetails } = req.body
+
+  // Check if driver already exists by email or phone
+  let user = await User.findOne({
+    $or: [{ email: email.toLowerCase() }, { phone }]
+  })
+
+  if (user) {
+    if (user.role !== 'DRIVER') {
+      return res.status(400).json({ error: { message: 'User already exists with a different role' } })
+    }
+    // Update existing driver
+    user.name = name
+    user.licenseNumber = licenseNumber
+    user.bankDetails = bankDetails
+    user.onboardingStatus = 'COMPLETED'
+    user.driverApprovalStatus = 'PENDING' // Needs manager approval
+  } else {
+    // Create new driver (without passwordHash, they will need to set it via invite/reset)
+    user = new User({
+      name,
+      email: email.toLowerCase(),
+      phone,
+      role: 'DRIVER',
+      licenseNumber,
+      bankDetails,
+      onboardingStatus: 'COMPLETED',
+      driverApprovalStatus: 'PENDING'
+    })
+  }
+
+  await user.save()
+
+  // Notify manager about new driver onboarding
+  const { createNotification } = await import('../services/notificationService.js')
+  await createNotification({
+    type: 'DRIVER_ONBOARDED',
+    message: `New driver ${name} has completed onboarding and is awaiting approval.`,
+    severity: 'INFO',
+    metadata: { driverId: user._id }
+  })
+
+  res.status(201).json({
+    message: 'Driver onboarding successful. Awaiting manager approval.',
+    driver: user
+  })
+}

@@ -8,6 +8,8 @@ const notificationSchema = new mongoose.Schema(
     message: { type: String, required: true },
     metadata: { type: mongoose.Schema.Types.Mixed },
     readAt: { type: Date },
+    resolvedAt: { type: Date },
+    isResolved: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

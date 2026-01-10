@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../auth/AuthContext';
 import {
@@ -35,7 +36,10 @@ type VehicleIotData = {
 
 export default function IotMonitor() {
     const { socket } = useAuth();
+    const [searchParams] = useSearchParams();
+    const highlightId = searchParams.get('highlight');
     const [iotUpdates, setIotUpdates] = useState<Record<string, Partial<VehicleIotData>>>({});
+    const highlightRef = useRef<HTMLDivElement>(null);
 
     const vehiclesQuery = useQuery({
         queryKey: ['fleetIot'],
@@ -45,6 +49,27 @@ export default function IotMonitor() {
         },
         refetchInterval: 30000,
     });
+
+    const notificationsQuery = useQuery({
+        queryKey: ['iotNotifications'],
+        queryFn: async () => {
+            const res = await api.get('/notifications');
+            return res.data.notifications.filter((n: any) =>
+                ['LOW_FUEL', 'TEMP_BREACH', 'MAINTENANCE'].includes(n.type) && !n.isResolved
+            );
+        },
+        refetchInterval: 10000,
+    });
+
+    const resolveAlert = async (notificationId: string) => {
+        try {
+            await api.post(`/notifications/${notificationId}/resolve`);
+            notificationsQuery.refetch();
+            vehiclesQuery.refetch();
+        } catch (err) {
+            console.error('Failed to resolve alert:', err);
+        }
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -71,13 +96,23 @@ export default function IotMonitor() {
         };
     }, [socket]);
 
+    useEffect(() => {
+        if (highlightId && highlightRef.current) {
+            highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [highlightId, vehiclesQuery.data]);
+
     const vehicles = (vehiclesQuery.data || []).map(v => ({
         ...v,
         ...(iotUpdates[v._id] || {})
     }));
 
     const activeVehicles = vehicles.filter(v => v.status === 'IN_USE');
+    const alerts = notificationsQuery.data || [];
+
+    // Derived alerts for the UI tags
     const alertVehicles = vehicles.filter(v =>
+        v.status === 'MAINTENANCE' ||
         v.currentFuelLiters < v.fuelThresholdLowLiters ||
         (v.isRefrigerated && v.currentTemperatureC && v.temperatureThresholdMaxC && v.currentTemperatureC > v.temperatureThresholdMaxC)
     );
@@ -133,13 +168,16 @@ export default function IotMonitor() {
                             {vehicles.map((vehicle) => (
                                 <motion.div
                                     key={vehicle._id}
+                                    ref={vehicle._id === highlightId ? highlightRef : null}
                                     layout
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className={`glass-card overflow-hidden group border-t-4 ${vehicle.status === 'IN_USE'
-                                        ? 'border-t-blue-500'
-                                        : 'border-t-slate-300 dark:border-t-slate-700'
+                                    className={`glass-card overflow-hidden group border-t-4 transition-all duration-500 ${vehicle._id === highlightId
+                                            ? 'ring-4 ring-blue-500 ring-offset-4 dark:ring-offset-slate-900 border-t-blue-600 scale-[1.02]'
+                                            : vehicle.status === 'IN_USE'
+                                                ? 'border-t-blue-500'
+                                                : 'border-t-slate-300 dark:border-t-slate-700'
                                         }`}
                                 >
                                     <div className="p-5">
@@ -237,26 +275,32 @@ export default function IotMonitor() {
                 <div className="space-y-6">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <AlertCircle className="h-6 w-6 text-red-500" />
-                        Active Alerts
+                        Active Monitoring Alerts
                     </h2>
 
                     <div className="space-y-4">
-                        {alertVehicles.length > 0 ? (
-                            alertVehicles.map(v => (
-                                <div key={v._id} className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-[1.5rem] flex gap-4 items-start animate-in slide-in-from-right-4 duration-300">
+                        {alerts.length > 0 ? (
+                            alerts.map((notif: any) => (
+                                <div key={notif._id} className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-[1.5rem] flex gap-4 items-start animate-in slide-in-from-right-4 duration-300">
                                     <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
                                         <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-red-900 dark:text-red-200">{v.plateNumber}</h4>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-red-900 dark:text-red-200">{notif.metadata?.plateNumber || 'System Alert'}</h4>
                                         <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">
-                                            {v.currentFuelLiters < v.fuelThresholdLowLiters
-                                                ? `Critical Low Fuel: ${v.currentFuelLiters.toFixed(1)}L left.`
-                                                : `Temperature Breach: ${v.currentTemperatureC?.toFixed(1)}°C detected.`}
+                                            {notif.message}
                                         </p>
-                                        <button className="mt-3 text-xs font-bold text-red-600 dark:text-red-400 underline underline-offset-2">
-                                            Notify Driver Now
-                                        </button>
+                                        <div className="mt-3 flex items-center gap-3">
+                                            <button
+                                                onClick={() => resolveAlert(notif._id)}
+                                                className="text-xs font-black px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                            >
+                                                Resolve Now
+                                            </button>
+                                            <button className="text-xs font-bold text-red-600 dark:text-red-400 underline underline-offset-2">
+                                                Notify Driver
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))

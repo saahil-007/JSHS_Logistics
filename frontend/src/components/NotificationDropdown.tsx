@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bell, Check, Clock } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
@@ -18,11 +19,32 @@ type Notification = {
 
 export default function NotificationDropdown() {
     const { socket, user } = useAuth()
+    const navigate = useNavigate()
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const unreadCount = notifications.filter((n) => !n.readAt).length
+
+    const handleNotificationClick = async (n: Notification) => {
+        if (!n.readAt) {
+            await markAsRead(n._id)
+        }
+
+        // Navigation logic based on notification type
+        if (n.type === 'LOW_FUEL' || n.type === 'TEMP_BREACH' || n.type === 'MAINTENANCE') {
+            const vehicleId = n.metadata?.vehicleId || n.metadata?.id;
+            if (vehicleId) {
+                navigate(`/app/iot-monitor?highlight=${vehicleId}`);
+            } else {
+                navigate('/app/iot-monitor');
+            }
+            setIsOpen(false);
+        } else if (n.metadata?.shipmentId) {
+            navigate(`/app/shipment/${n.metadata.shipmentId}`);
+            setIsOpen(false);
+        }
+    }
 
     const fetchNotifications = async () => {
         try {
@@ -68,9 +90,9 @@ export default function NotificationDropdown() {
                     toast(newNotif.message, { ...toastOptions, icon: '🔔' })
             }
 
-            // Play sound
-            const audio = new Audio('/notification.mp3')
-            audio.play().catch(() => { })
+            // Play sound (simulated/optional)
+            // const audio = new Audio('/notification.mp3')
+            // audio.play().catch(() => { })
         }
 
         socket.on('notification:new', onNotification)
@@ -140,7 +162,7 @@ export default function NotificationDropdown() {
                                         key={n._id}
                                         className={`p-4 transition-colors hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer relative group ${!n.readAt ? 'bg-blue-50/30 dark:bg-blue-500/5' : ''
                                             }`}
-                                        onClick={() => !n.readAt && markAsRead(n._id)}
+                                        onClick={() => handleNotificationClick(n)}
                                     >
                                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${n.severity === 'ERROR' ? 'bg-red-500' :
                                             n.severity === 'WARNING' ? 'bg-amber-500' :

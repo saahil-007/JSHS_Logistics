@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import type { Vehicle } from '../../types'
@@ -12,6 +13,7 @@ function serviceRemainingKm(v: Vehicle) {
 }
 
 export default function Fleet() {
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -22,7 +24,9 @@ export default function Fleet() {
     pucNumber: '',
     rcNumber: '',
     capacityKg: 1000,
-    fuelType: 'DIESEL'
+    fuelType: 'DIESEL',
+    registrationDetails: { registrationDate: '', ownerName: '' },
+    insuranceDetails: { policyNumber: '', expiryDate: '', provider: '' }
   }
   const [formData, setFormData] = useState(initialFormState)
 
@@ -50,7 +54,7 @@ export default function Fleet() {
         status: string;
       }[]
     },
-    refetchInterval: 4000, // Refresh every 4 seconds as requested
+    refetchInterval: 4000,
   })
 
   if (vehiclesQ.isError) return (
@@ -61,10 +65,6 @@ export default function Fleet() {
       <button onClick={() => vehiclesQ.refetch()} className="btn-primary mt-6">Retry Sync</button>
     </div>
   )
-
-  if (trackingQ.isError) {
-    console.error('Fleet positions sync failed:', trackingQ.error)
-  }
 
   const stats = useMemo(() => {
     if (!vehiclesQ.data?.stats) return { total: 0, active: 0, maintenance: 0, dueSoon: 0 }
@@ -97,7 +97,16 @@ export default function Fleet() {
       pucNumber: v.pucNumber || '',
       rcNumber: v.rcNumber || '',
       capacityKg: v.capacityKg,
-      fuelType: v.fuelType as string
+      fuelType: v.fuelType as string,
+      registrationDetails: {
+        registrationDate: v.registrationDetails?.registrationDate ? new Date(v.registrationDetails.registrationDate).toISOString().split('T')[0] : '',
+        ownerName: v.registrationDetails?.ownerName || ''
+      },
+      insuranceDetails: {
+        policyNumber: v.insuranceDetails?.policyNumber || '',
+        expiryDate: v.insuranceDetails?.expiryDate ? new Date(v.insuranceDetails.expiryDate).toISOString().split('T')[0] : '',
+        provider: v.insuranceDetails?.provider || ''
+      }
     })
     setEditingId(v._id)
     setIsModalOpen(true)
@@ -142,7 +151,6 @@ export default function Fleet() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Vehicle Inventory (lg:col-span-2) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Vehicle Inventory</h2>
@@ -163,7 +171,22 @@ export default function Fleet() {
                 </thead>
                 <tbody className="divide-y divide-slate-200/60 dark:divide-white/10">
                   {vehiclesQ.data?.vehicles.map((v) => (
-                    <tr key={v._id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-white/5 group">
+                    <tr
+                      key={v._id}
+                      onClick={() => {
+                        if (v.status === 'IN_USE') {
+                          const tracking = trackingQ.data?.find(t => String(t.vehicle._id) === String(v._id));
+                          if (tracking?.position?.shipmentId) {
+                            navigate(`/app/shipment/${tracking.position.shipmentId}`);
+                          } else {
+                            navigate('/app/iot-monitor');
+                          }
+                        } else {
+                          navigate('/app/iot-monitor');
+                        }
+                      }}
+                      className="transition-colors hover:bg-slate-50/50 dark:hover:bg-white/5 group cursor-pointer"
+                    >
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
@@ -203,7 +226,10 @@ export default function Fleet() {
                       </td>
                       <td className="p-3 text-right">
                         <button
-                          onClick={() => handleEdit(v)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(v);
+                          }}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                         >
                           <Pencil className="h-4 w-4" />
@@ -215,7 +241,6 @@ export default function Fleet() {
               </table>
             </div>
 
-            {/* Pagination */}
             {vehiclesQ.data && vehiclesQ.data.pages > 1 && (
               <div className="flex items-center justify-center gap-2 p-4 border-t border-slate-200/60 dark:border-white/10">
                 <button
@@ -251,51 +276,18 @@ export default function Fleet() {
           </div>
         </div>
 
-        {/* Right Column: Tracking & Performance (lg:col-span-1) */}
         <div className="space-y-6">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Live Tracking</h2>
-            <FleetTrackingMap vehicles={trackingQ.data!} height="400px" />
+            <FleetTrackingMap vehicles={trackingQ.data || []} height="400px" />
           </div>
 
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fleet Performance</h2>
             <div className="grid grid-cols-1 gap-4">
-              <div className="glass-card p-4 border-l-4 border-l-blue-500">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                    <Gauge className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Efficiency</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">94%</div>
-                  <div className="text-[10px] text-green-500 font-bold">↑ 2.4%</div>
-                </div>
-                <div className="text-xs text-slate-500 mt-1">Overall fleet utilization</div>
-              </div>
-
-              <div className="glass-card p-4 border-l-4 border-l-green-500">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-8 w-8 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                    <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Compliance</span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">98.2</div>
-                <div className="text-xs text-slate-500 mt-1">Safety & regulatory score</div>
-              </div>
-
-              <div className="glass-card p-4 border-l-4 border-l-purple-500">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-8 w-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Health</span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">Low Risk</div>
-                <div className="text-xs text-slate-500 mt-1">Predictive maintenance alerts</div>
-              </div>
+              <StatPerformanceCard icon={Gauge} label="Efficiency" value="94%" trend="↑ 2.4%" color="blue" description="Overall fleet utilization" />
+              <StatPerformanceCard icon={Zap} label="Compliance" value="98.2" color="green" description="Safety & regulatory score" />
+              <StatPerformanceCard icon={Activity} label="Health" value="Low Risk" color="purple" description="Predictive maintenance alerts" />
             </div>
           </div>
         </div>
@@ -352,24 +344,61 @@ export default function Fleet() {
               </select>
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">RC Number</label>
-            <input
-              value={formData.rcNumber}
-              onChange={e => setFormData({ ...formData, rcNumber: e.target.value })}
-              placeholder="Enter RC Number"
-              className="input-glass"
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">Registration Date</label>
+              <input
+                type="date"
+                value={formData.registrationDetails.registrationDate}
+                onChange={e => setFormData({ ...formData, registrationDetails: { ...formData.registrationDetails, registrationDate: e.target.value } })}
+                className="input-glass"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">Owner Name</label>
+              <input
+                value={formData.registrationDetails.ownerName}
+                onChange={e => setFormData({ ...formData, registrationDetails: { ...formData.registrationDetails, ownerName: e.target.value } })}
+                placeholder="Owner Name"
+                className="input-glass"
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">PUC Number</label>
-            <input
-              value={formData.pucNumber}
-              onChange={e => setFormData({ ...formData, pucNumber: e.target.value })}
-              placeholder="Enter PUC Number"
-              className="input-glass"
-            />
+
+          <div className="border-t border-slate-100 dark:border-white/5 pt-4">
+            <label className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block mb-4">Insurance Details</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">Policy Number</label>
+                <input
+                  value={formData.insuranceDetails.policyNumber}
+                  onChange={e => setFormData({ ...formData, insuranceDetails: { ...formData.insuranceDetails, policyNumber: e.target.value } })}
+                  placeholder="Policy #"
+                  className="input-glass"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">Expiry Date</label>
+                <input
+                  type="date"
+                  value={formData.insuranceDetails.expiryDate}
+                  onChange={e => setFormData({ ...formData, insuranceDetails: { ...formData.insuranceDetails, expiryDate: e.target.value } })}
+                  className="input-glass"
+                />
+              </div>
+            </div>
+            <div className="space-y-1 mt-4">
+              <label className="text-xs font-semibold text-slate-500 dark:text-white/60 uppercase">Insurance Provider</label>
+              <input
+                value={formData.insuranceDetails.provider}
+                onChange={e => setFormData({ ...formData, insuranceDetails: { ...formData.insuranceDetails, provider: e.target.value } })}
+                placeholder="Provider (e.g. HDFC Ergo)"
+                className="input-glass"
+              />
+            </div>
           </div>
+
           <div className="pt-4">
             <button type="submit" className="btn-primary w-full py-3 text-base">
               {editingId ? "Save Changes" : "Register Vehicle"}
@@ -397,74 +426,32 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   )
 }
 
+function StatPerformanceCard({ icon: Icon, label, value, trend, color, description }: any) {
+  return (
+    <div className={`glass-card p-4 border-l-4 border-l-${color}-500`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className={`h-8 w-8 rounded-lg bg-${color}-50 dark:bg-${color}-900/20 flex items-center justify-center`}>
+          <Icon className={`h-4 w-4 text-${color}-600 dark:text-${color}-400`} />
+        </div>
+        <span className={`text-[10px] font-bold text-${color}-600 uppercase tracking-widest`}>{label}</span>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <div className="text-2xl font-bold text-slate-900 dark:text-white">{value}</div>
+        {trend && <div className="text-[10px] text-green-500 font-bold">{trend}</div>}
+      </div>
+      <div className="text-xs text-slate-500 mt-1">{description}</div>
+    </div>
+  );
+}
+
 function FleetSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <Skeleton className="h-10 w-32" />
-      </div>
-
+      <Skeleton className="h-[200px] w-full rounded-[2.5rem]" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="glass-card h-24">
-            <div className="flex justify-between">
-              <div className="space-y-1">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-6 w-12" />
-              </div>
-              <Skeleton className="h-8 w-8 rounded-xl" />
-            </div>
-          </div>
+          <Skeleton key={i} className="h-24 rounded-2xl" />
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-5 w-24 rounded-full" />
-          </div>
-          <div className="table-glass">
-            <div className="p-4 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-xl" />
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-48" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-12 ml-auto" />
-                    <Skeleton className="h-3 w-16 ml-auto" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-[300px] w-full border border-slate-100 dark:border-white/5 rounded-2xl" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-40" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="glass-card h-28 flex flex-col justify-between">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )
