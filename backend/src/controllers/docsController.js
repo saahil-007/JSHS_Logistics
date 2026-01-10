@@ -102,6 +102,9 @@ export async function listDocsForShipment(req, res) {
         if (!DOC_TYPES.includes(doc.type)) return
 
         const fullShipment = await Shipment.findById(shipmentId)
+          .populate('customerId', 'name email address')
+          .populate('assignedDriverId', 'name licenseNumber phone')
+          .populate('assignedVehicleId', 'plateNumber model')
         if (!fullShipment) return
 
         const { fileName, relativePath } = await generateShipmentPdf({ shipment: fullShipment, type: doc.type, actor: req.user })
@@ -172,6 +175,9 @@ export async function generateDocForShipment(req, res) {
   }
 
   const shipment = await Shipment.findById(shipmentId)
+    .populate('customerId', 'name email phone address')
+    .populate('assignedDriverId', 'name licenseNumber phone')
+    .populate('assignedVehicleId', 'plateNumber model type capacity')
   if (!shipment) return res.status(404).json({ error: { message: 'Shipment not found' } })
   assertShipmentAccess(req.user, shipment)
 
@@ -253,16 +259,36 @@ export async function listAllDocs(req, res) {
   }
 
   // Categorisation logic
+  // Categorisation logic
   if (category === 'SHIPMENT') {
     // All documents are visible shipment-wise (if owned by user)
   } else if (category === 'DRIVER') {
     // Drivers mostly care about their own docs
-    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'POD', 'TRIP_SHEET'] }
+    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'POD', 'TRIP_SHEET', 'VEHICLE_INSPECTION'] }
   } else if (category === 'VEHICLE') {
     query.type = { $in: ['PACKING_LIST', 'CMR_ROAD_CONSIGNMENT_NOTE', 'VEHICLE_INSPECTION', 'MAINTENANCE_RECORD'] }
   } else if (category === 'CUSTOMER') {
     query.type = { $in: ['COMMERCIAL_INVOICE', 'CERTIFICATE_OF_ORIGIN', 'BILL_OF_LADING', 'AIR_WAYBILL', 'TELEX_RELEASE', 'SEA_WAYBILL', 'GST_INVOICE'] }
+  } else if (category === 'CONSIGNOR') {
+    query.customerId = { $exists: true }
+  } else if (category === 'UNIVERSAL') {
+    query.type = { $in: ['COMMERCIAL_INVOICE', 'PACKING_LIST', 'CERTIFICATE_OF_ORIGIN'] }
+  } else if (category === 'SEA') {
+    query.type = { $in: ['BILL_OF_LADING', 'TELEX_RELEASE', 'SEA_WAYBILL'] }
+  } else if (category === 'AIR') {
+    query.type = { $in: ['AIR_WAYBILL'] }
+  } else if (category === 'ROAD') {
+    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'TRIP_SHEET'] }
+  } else if (category === 'CUSTOMS') {
+    query.type = { $in: ['SHIPPING_BILL', 'BILL_OF_ENTRY'] }
   }
+
+  const page = parseInt(req.query.page) || 1
+  const limit = parseInt(req.query.limit) || 20
+  const skip = (page - 1) * limit
+
+  const totalDocs = await Document.countDocuments(query)
+  const totalPages = Math.ceil(totalDocs / limit)
 
   const docs = await Document.find(query)
     .populate('shipmentId', 'referenceId status')
@@ -270,10 +296,19 @@ export async function listAllDocs(req, res) {
     .populate('driverId', 'name email')
     .populate('vehicleId', 'plateNumber model')
     .sort({ createdAt: -1 })
-    .limit(200)
+    .skip(skip)
+    .limit(limit)
     .lean()
 
-  res.json({ documents: docs })
+  res.json({
+    documents: docs,
+    pagination: {
+      total: totalDocs,
+      page,
+      limit,
+      totalPages
+    }
+  })
 }
 
 export async function deleteDoc(req, res) {

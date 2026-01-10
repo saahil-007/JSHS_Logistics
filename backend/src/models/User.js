@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema(
     driverApprovalStatus: { type: String, enum: DRIVER_APPROVAL_STATUS },
     performanceRating: { type: Number, default: 5 },
     awards: [{ type: String }],
+
+    // Detailed Business Fields
+    address: { type: String, trim: true },
+    gstNumber: { type: String, trim: true },
+    legalName: { type: String, trim: true }, // If different from name
   },
   { timestamps: true }
 )

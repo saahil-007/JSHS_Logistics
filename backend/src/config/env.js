@@ -1,6 +1,9 @@
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-dotenv.config()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
@@ -34,6 +37,11 @@ export const env = {
   // Prefer explicit FROM number; fall back to TWILIO_PHONE_NUMBER if that's what is set
   TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER,
   TWILIO_MESSAGING_SERVICE_SID: process.env.TWILIO_MESSAGING_SERVICE_SID,
+
+  // Mail
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_FROM: process.env.SMTP_FROM || '"JSHS Logistics" <no-reply@jshslogistics.com>',
 }
 
 if (!process.env.MONGODB_URI) {

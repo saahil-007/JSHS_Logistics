@@ -16,6 +16,20 @@ const vehicleSchema = new mongoose.Schema(
     type: { type: String, enum: ['TRUCK_LG', 'TRUCK_SM', 'VAN', 'BIKE'], default: 'TRUCK_SM' },
     fuelType: { type: String, enum: ['DIESEL', 'PETROL', 'ELECTRIC', 'CNG'], default: 'DIESEL' },
     gpsDeviceId: { type: String, unique: true, sparse: true }, // IMEI or Device ID
+    currentLocation: {
+      lat: { type: Number },
+      lng: { type: Number },
+      updatedAt: { type: Date },
+    },
+    // IoT Sensor Data
+    fuelCapacityLiters: { type: Number, default: 100 },
+    currentFuelLiters: { type: Number, default: 100 },
+    fuelThresholdLowLiters: { type: Number, default: 15 },
+
+    isRefrigerated: { type: Boolean, default: false },
+    currentTemperatureC: { type: Number },
+    temperatureThresholdMaxC: { type: Number, default: -15 }, // Set Alert if above this
+    temperatureThresholdMinC: { type: Number, default: -25 }, // Set Alert if below this
   },
   { timestamps: true }
 )

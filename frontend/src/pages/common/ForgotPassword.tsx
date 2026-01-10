@@ -22,7 +22,7 @@ export default function ForgotPassword() {
     setIsLoading(true)
     try {
       await api.post('/auth/forgot-password', { email: email.trim() })
-      setInfo('OTP sent to your registered mobile number')
+      setInfo('OTP sent to your registered email address')
       setStep('RESET')
     } catch (err) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
@@ -67,7 +67,7 @@ export default function ForgotPassword() {
               Forgot Password
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              We will send an OTP to your registered mobile number.
+              We will send an OTP to your registered email address.
             </p>
           </div>
 

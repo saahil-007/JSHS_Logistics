@@ -24,6 +24,7 @@ import DriverEarnings from './pages/driver/DriverEarnings'
 import CustomerCreateShipment from './pages/customer/CustomerCreateShipment'
 import PendingApprovals from './pages/manager/PendingApprovals'
 import Documents from './pages/manager/Documents'
+import IotMonitor from './pages/manager/IotMonitor'
 import { getAppType } from './utils/subdomainUtils'
 import VapiWidget from './components/VapiWidget'
 
@@ -94,6 +95,14 @@ export default function App() {
             }
           />
           <Route
+            path="iot-monitor"
+            element={
+              <ProtectedRoute roles={['MANAGER']}>
+                <IotMonitor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="drivers"
             element={
               <ProtectedRoute roles={['MANAGER']}>
@@ -113,6 +122,14 @@ export default function App() {
           />
           <Route
             path="documents"
+            element={
+              <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
+                <Documents />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="documents/:category"
             element={
               <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
                 <Documents />

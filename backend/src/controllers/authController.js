@@ -18,7 +18,7 @@ const loginSchema = z.object({
 })
 
 const sendOtpSchema = z.object({
-  phone: z.string().min(10).max(15),
+  email: z.string().email(),
   purpose: z.enum(['REGISTER', 'RESET_PASSWORD']),
 })
 
@@ -35,7 +35,11 @@ const resetPasswordSchema = z.object({
 export async function register(req, res) {
   const data = registerSchema.parse(req.body)
 
-  const ok = await verifyOtp({ phone: data.phone, purpose: 'REGISTER', code: data.otp })
+  const ok = await verifyOtp({
+    email: data.email,
+    purpose: 'REGISTER',
+    code: data.otp
+  })
   if (!ok) {
     return res.status(400).json({ error: { message: 'Invalid or expired OTP' } })
   }
@@ -76,9 +80,9 @@ export async function login(req, res) {
 }
 
 export async function sendOtpHandler(req, res) {
-  const { phone, purpose } = sendOtpSchema.parse(req.body)
+  const { email, purpose } = sendOtpSchema.parse(req.body)
 
-  await sendOtp({ phone, purpose })
+  await sendOtp({ email, purpose })
 
   res.json({ success: true })
 }
@@ -90,8 +94,8 @@ export async function forgotPassword(req, res) {
   const { User } = await import('../models/User.js')
   const user = await User.findOne({ email: email.trim().toLowerCase() }).lean()
 
-  if (user?.phone) {
-    await sendOtp({ phone: user.phone, purpose: 'RESET_PASSWORD' })
+  if (user) {
+    await sendOtp({ email: user.email, purpose: 'RESET_PASSWORD' })
   }
 
   res.json({ success: true })
@@ -102,11 +106,15 @@ export async function resetPassword(req, res) {
 
   const { User } = await import('../models/User.js')
   const user = await User.findOne({ email: email.trim().toLowerCase() })
-  if (!user || !user.phone) {
+  if (!user) {
     return res.status(400).json({ error: { message: 'Invalid request' } })
   }
 
-  const ok = await verifyOtp({ phone: user.phone, purpose: 'RESET_PASSWORD', code: otp })
+  const ok = await verifyOtp({
+    email: user.email,
+    purpose: 'RESET_PASSWORD',
+    code: otp
+  })
   if (!ok) {
     return res.status(400).json({ error: { message: 'Invalid or expired OTP' } })
   }

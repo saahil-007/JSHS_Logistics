@@ -1,6 +1,8 @@
 import { Notification } from '../models/Notification.js'
 import { getIO } from '../sockets/io.js'
 import { getNotificationTemplate } from '../utils/notificationTemplates.js'
+import { sendEmail } from './emailService.js'
+import { getShipmentStatusTemplate } from '../utils/mailTemplates.js'
 
 
 export async function createNotification({ userId, type, severity = 'INFO', message, metadata }) {
@@ -82,12 +84,24 @@ export async function notifyAllStakeholders(shipment, eventType, customMessage =
       }
     });
 
-    // Simulate SMS for critical alerts
-    if (eventType === 'SHIPMENT_OUT_FOR_DELIVERY' || eventType === 'SHIPMENT_DELIVERED') {
-      const user = await import('../models/User.js').then(m => m.User.findById(id));
-      if (user && user.phone) {
-        sendSMS(user.phone, message);
-      }
+    // Proactive Mailing (Eradicating patchwork mailing logic elsewhere)
+    if (eventType !== 'LOCATION_UPDATE' && !timelineEvents.includes(eventType)) {
+      (async () => {
+        try {
+          const { User } = await import('../models/User.js');
+          const user = await User.findById(id).select('email name').lean();
+          if (user && user.email) {
+            const html = getShipmentStatusTemplate(eventType, shipment);
+            await sendEmail({
+              to: user.email,
+              subject: `JSHS Update: ${message.split('.')[0]}`,
+              html
+            });
+          }
+        } catch (e) {
+          console.error('[NOTIF] Email trigger failed:', e.message);
+        }
+      })();
     }
 
     notifications.push(notif);

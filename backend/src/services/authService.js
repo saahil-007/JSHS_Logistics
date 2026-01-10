@@ -2,6 +2,8 @@ import { User, USER_ROLES } from '../models/User.js'
 import { hashPassword, verifyPassword } from '../utils/password.js'
 import { signToken } from '../utils/jwt.js'
 import { createNotification } from './notificationService.js'
+import { sendEmail } from './emailService.js'
+import { getWelcomeTemplate } from '../utils/mailTemplates.js'
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -40,6 +42,13 @@ export async function registerUser({ name, email, phone, password, role }) {
   }
 
   const user = await User.create(userData)
+
+  // Trigger Welcome Email
+  sendEmail({
+    to: user.email,
+    subject: `Welcome to JSHS Logistics, ${user.name}!`,
+    html: getWelcomeTemplate(user.name, user.role)
+  }).catch(err => console.error('[AUTH] Welcome email failed:', err.message));
 
   const token = signToken({ sub: user._id.toString(), role: user.role })
   return { user, token }

@@ -83,6 +83,16 @@ export function getNotificationTemplate(eventType, shipment, role = 'CUSTOMER') 
             DRIVER: { message: `Location ping received for ${ref}.`, severity: 'INFO' },
             MANAGER: { message: `Shipment ${ref} location change logged.`, severity: 'INFO' }
         },
+        IOT_ALERT_FUEL: {
+            default: { message: `Low fuel alert detected.`, severity: 'WARNING' },
+            MANAGER: { message: `CRITICAL: Low fuel detected for vehicle attached to ${ref}.`, severity: 'WARNING' },
+            DRIVER: { message: `ATTENTION: Fuel levels are low. Please refill soon.`, severity: 'WARNING' }
+        },
+        IOT_ALERT_TEMP: {
+            default: { message: `Temperature breach alert.`, severity: 'ERROR' },
+            MANAGER: { message: `CRITICAL: Temperature breach for vehicle attached to ${ref}.`, severity: 'ERROR' },
+            DRIVER: { message: `ALERT: Chiller temperature is out of range! Check system immediately.`, severity: 'ERROR' }
+        },
     };
 
     const eventTemplates = templates[eventType] || {};

@@ -88,7 +88,8 @@ export default function ShipmentDetail() {
     queryKey: ['sim-status'],
     queryFn: () => simulationApi.getStatus(),
     refetchInterval: (query) => (query.state.data as any)?.running ? 10000 : false,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    enabled: isManagerPortal // Only managers can access simulation status
   })
 
   const eventsQ = useQuery({

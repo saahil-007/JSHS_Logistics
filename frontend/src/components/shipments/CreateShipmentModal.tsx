@@ -128,14 +128,15 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
     async function handleSelectSuggestion(target: 'origin' | 'destination', prediction: any) {
         try {
             const res = await api.get('/locations/details', { params: { placeId: prediction.place_id } })
-            const { location, name } = res.data
+            const { location, name, address } = res.data
+            const fullAddress = address || name
 
             if (target === 'origin') {
-                setOriginName(name)
+                setOriginName(fullAddress)
                 setOriginPos({ lat: location.lat, lng: location.lng })
                 setShowOriginSuggestions(false)
             } else {
-                setDestinationName(name)
+                setDestinationName(fullAddress)
                 setDestinationPos({ lat: location.lat, lng: location.lng })
                 setShowDestSuggestions(false)
             }

@@ -57,9 +57,10 @@ export default function LocationSearch({ value, onChange, placeholder, className
     const handleSelect = async (suggestion: any) => {
         try {
             const res = await api.get('/locations/details', { params: { placeId: suggestion.place_id } })
-            const { location, name } = res.data
-            const newLoc = { name, lat: location.lat, lng: location.lng }
-            setQuery(name)
+            const { location, name, address } = res.data
+            const fullAddress = address || name
+            const newLoc = { name: fullAddress, lat: location.lat, lng: location.lng }
+            setQuery(fullAddress)
             onChange(newLoc)
             setShowSuggestions(false)
         } catch (err) {

@@ -2,6 +2,8 @@ import { Shipment } from '../models/Shipment.js';
 import { Vehicle } from '../models/Vehicle.js';
 import { LocationPing } from '../models/LocationPing.js';
 import { getIO } from '../sockets/io.js';
+import { createNotification } from './notificationService.js';
+import { User } from '../models/User.js';
 
 let simulationInterval = null;
 
@@ -77,14 +79,73 @@ export function startSimulation() {
 
                 await s.save();
 
-                // Update Associated Vehicle
+                // Update Associated Vehicle with IoT Simulation
                 if (s.assignedVehicleId) {
-                    await Vehicle.findByIdAndUpdate(s.assignedVehicleId, {
-                        currentLocation: { lat: newLat, lng: newLng, updatedAt: new Date() }
-                    });
+                    const vehicle = await Vehicle.findById(s.assignedVehicleId);
+                    if (vehicle) {
+                        // 1. Update Location
+                        vehicle.currentLocation = { lat: newLat, lng: newLng, updatedAt: new Date() };
+                        vehicle.odometerKm += 0.5; // Simulate distance increase
+
+                        // 2. Simulate Fuel Consumption
+                        // Consumes 0.05 to 0.15 liters per tick
+                        const fuelConsumed = 0.05 + Math.random() * 0.1;
+                        vehicle.currentFuelLiters = Math.max(0, vehicle.currentFuelLiters - fuelConsumed);
+
+                        // 3. Simulate Chiller Temperature (if refrigerated)
+                        if (vehicle.isRefrigerated) {
+                            if (!vehicle.currentTemperatureC) vehicle.currentTemperatureC = -20;
+                            // Small fluctuation
+                            const change = (Math.random() - 0.5) * 0.5;
+                            vehicle.currentTemperatureC += change;
+
+                            // Threshold Alert (High Temp)
+                            if (vehicle.currentTemperatureC > vehicle.temperatureThresholdMaxC) {
+                                // Find manager to notify
+                                const manager = await User.findOne({ role: 'MANAGER' });
+                                if (manager) {
+                                    await createNotification({
+                                        userId: manager._id,
+                                        type: 'IOT_ALERT_TEMP',
+                                        severity: 'ERROR',
+                                        message: `CRITICAL: Chiller temperature breach in vehicle ${vehicle.plateNumber}. Current: ${vehicle.currentTemperatureC.toFixed(1)}°C`,
+                                        metadata: { vehicleId: vehicle._id, plateNumber: vehicle.plateNumber, temperature: vehicle.currentTemperatureC }
+                                    });
+                                }
+                            }
+                        }
+
+                        // Low Fuel Alert
+                        if (vehicle.currentFuelLiters < vehicle.fuelThresholdLowLiters) {
+                            const manager = await User.findOne({ role: 'MANAGER' });
+                            if (manager) {
+                                await createNotification({
+                                    userId: manager._id,
+                                    type: 'IOT_ALERT_FUEL',
+                                    severity: 'WARNING',
+                                    message: `LOW FUEL: Vehicle ${vehicle.plateNumber} has only ${vehicle.currentFuelLiters.toFixed(1)}L remaining.`,
+                                    metadata: { vehicleId: vehicle._id, plateNumber: vehicle.plateNumber, fuel: vehicle.currentFuelLiters }
+                                });
+                            }
+                        }
+
+                        await vehicle.save();
+
+                        // Emit Fleet Update with IoT Data
+                        if (io) {
+                            io.emit('fleet:iotUpdate', {
+                                vehicleId: vehicle._id,
+                                plateNumber: vehicle.plateNumber,
+                                fuel: vehicle.currentFuelLiters,
+                                temp: vehicle.currentTemperatureC,
+                                lat: newLat,
+                                lng: newLng
+                            });
+                        }
+                    }
                 }
 
-                // Emit Events
+                // Emit Shipment Events
                 if (io) {
                     io.to(`shipment:${s._id}`).emit('shipment:locationUpdate', {
                         shipmentId: s._id,
