@@ -612,7 +612,7 @@ export async function autoAssignCustomerShipment({ origin, weightKg }) {
  * Prepare shipment data without saving to DB
  */
 export async function prepareCustomerShipment({ customerId, data }) {
-  const { origin, destination, goodsImages, packageDetails, deliveryType, pricingMode, customPrice, category, customCategory } = data;
+  const { origin, destination, goodsImages, packageDetails, deliveryType, pricingMode, customPrice, category, customCategory, consigneeName, consigneeContact } = data;
 
   // 1. Calculate distance
   const distance = haversineKm(origin, destination);
@@ -690,6 +690,10 @@ export async function prepareCustomerShipment({ customerId, data }) {
     customGoodsCategory: customCategory,
     assignedVehicleId: vehicleId,
     assignedDriverId: driverId,
+    consignee: {
+      name: consigneeName,
+      contact: consigneeContact
+    },
     status: 'CREATED',
     approvalStatus: 'PENDING_APPROVAL',
     paymentStatus: 'PENDING',

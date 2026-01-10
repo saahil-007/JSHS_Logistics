@@ -43,6 +43,20 @@ const vehicleSchema = new mongoose.Schema(
     currentTemperatureC: { type: Number },
     temperatureThresholdMaxC: { type: Number, default: -15 }, // Set Alert if above this
     temperatureThresholdMinC: { type: Number, default: -25 }, // Set Alert if below this
+
+    // Advanced Health Metrics
+    batteryVoltage: { type: Number, default: 12.6 }, // 12.0 to 14.0
+    batteryHealthPercent: { type: Number, default: 95 },
+    engineStatus: { type: String, enum: ['OFF', 'IDLE', 'RUNNING', 'WARNING'], default: 'OFF' },
+    engineLoadPercent: { type: Number, default: 0 },
+    oilLifeRemainingPercent: { type: Number, default: 100 },
+    tirePressurePsi: {
+      frontLeft: { type: Number, default: 35 },
+      frontRight: { type: Number, default: 35 },
+      rearLeft: { type: Number, default: 35 },
+      rearRight: { type: Number, default: 35 }
+    },
+    coolantTempC: { type: Number, default: 85 },
   },
   { timestamps: true }
 )

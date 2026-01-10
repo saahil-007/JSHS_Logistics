@@ -209,14 +209,20 @@ export async function createPredictiveNotifications(shipment) {
   return notifications;
 }
 
-export async function sendSMS(to, body) {
-  // Simulator for receiving SMS
-  console.log('================================================================');
-  console.log(`[SMS GATEWAY] Sending SMS to ${to}`);
-  console.log(`[SMS CONTENT] ${body}`);
-  console.log('================================================================');
+import { sendOtpSms } from './twilioService.js'
 
-  // In a real implementation, we would integrate with Twilio/MSG91/AWS SNS here
-  // return await smsProvider.send({ to, body });
-  return true;
+export async function sendSMS(to, body) {
+  try {
+    console.log(`[SMS GATEWAY] Sending SMS to ${to}`);
+    await sendOtpSms({ to, body });
+    return true;
+  } catch (err) {
+    console.error('[SMS GATEWAY] Twilio send failed:', err.message);
+    // Placeholder log for demo if Twilio fails
+    console.log('================================================================');
+    console.log(`[SMS FALLBACK] To: ${to}`);
+    console.log(`[SMS CONTENT] ${body}`);
+    console.log('================================================================');
+    return false;
+  }
 }

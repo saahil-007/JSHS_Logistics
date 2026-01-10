@@ -42,7 +42,9 @@ export default function CustomerCreateShipment() {
         deliveryType: 'standard' as 'standard' | 'express',
         category: 'KIRANA' as 'KIRANA' | 'DAWAI' | 'KAPDA' | 'DAIRY' | 'AUTO_PARTS' | 'ELECTRONICS' | 'CUSTOM',
         customCategory: '',
-        notes: ''
+        notes: '',
+        consigneeName: '',
+        consigneeContact: ''
     })
 
     const [pricingMode, setPricingMode] = useState<'AUTO' | 'CUSTOM'>('AUTO')
@@ -50,6 +52,8 @@ export default function CustomerCreateShipment() {
     const [estimatedCost, setEstimatedCost] = useState(0)
     const [createdShipment, setCreatedShipment] = useState<any>(null)
     const [razorpayOrder, setRazorpayOrder] = useState<any>(null)
+
+    const isPhoneValid = /^[6-9]\d{9}$/.test(formData.consigneeContact)
 
 
 
@@ -133,7 +137,9 @@ export default function CustomerCreateShipment() {
                     dimensions: formData.dimensions
                 },
                 deliveryType: formData.deliveryType,
-                goodsImages: formData.goodsImages
+                goodsImages: formData.goodsImages,
+                consigneeName: formData.consigneeName,
+                consigneeContact: formData.consigneeContact
             }
 
             console.log('Submitting Payload:', payload)
@@ -269,13 +275,45 @@ export default function CustomerCreateShipment() {
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Consignee Name</label>
+                            <input
+                                type="text"
+                                value={formData.consigneeName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, consigneeName: e.target.value }))}
+                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="Enter recipient's name"
+                            />
+                        </div>
+                        <div className="space-y-4">
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Consignee Number</label>
+                            <input
+                                type="text"
+                                value={formData.consigneeContact}
+                                onChange={(e) => setFormData(prev => ({ ...prev, consigneeContact: e.target.value }))}
+                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="Enter recipient's contact number"
+                            />
+                        </div>
+                    </div>
+
                     <div className="pt-6 flex justify-end">
                         <button
                             onClick={() => setStep(2)}
-                            disabled={!formData.origin || !formData.destination}
-                            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                            disabled={!formData.origin || !formData.destination || !formData.consigneeName || !isPhoneValid}
+                            className={`px-6 py-3 text-white rounded-xl font-bold transition-all flex items-center gap-2 ${!formData.origin || !formData.destination || !formData.consigneeName || !isPhoneValid
+                                ? 'bg-slate-300 cursor-not-allowed opacity-50'
+                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25'
+                                }`}
                         >
-                            Next Step <ChevronRight className="h-5 w-5" />
+                            {isPhoneValid ? (
+                                <>Next Step <ChevronRight className="h-5 w-5" /></>
+                            ) : formData.consigneeContact ? (
+                                <>Invalid Number</>
+                            ) : (
+                                <>Enter Number</>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -502,112 +540,117 @@ export default function CustomerCreateShipment() {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Step 3: Payment (only for Pay Now flow) */}
-            {step === 3 && createdShipment && paymentOption === 'PAY_NOW' && (
-                <div className="max-w-md mx-auto animate-in zoom-in-95 duration-300">
-                    <div className="glass-card p-8 text-center space-y-6">
-                        <div className="h-20 w-20 bg-indigo-100 dark:bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <CreditCard className="h-10 w-10 text-indigo-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold">Complete Payment</h2>
-                            <p className="text-slate-500 mt-2">Finish booking by paying the demonstration fee of ₹1.</p>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-xl text-left space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-500">Ref ID</span>
-                                <span className="font-mono font-bold">{createdShipment.referenceId}</span>
+            {
+                step === 3 && createdShipment && paymentOption === 'PAY_NOW' && (
+                    <div className="max-w-md mx-auto animate-in zoom-in-95 duration-300">
+                        <div className="glass-card p-8 text-center space-y-6">
+                            <div className="h-20 w-20 bg-indigo-100 dark:bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <CreditCard className="h-10 w-10 text-indigo-600" />
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-500">Amount</span>
-                                <span className="font-bold">₹1.00</span>
+                            <div>
+                                <h2 className="text-2xl font-bold">Complete Payment</h2>
+                                <p className="text-slate-500 mt-2">Finish booking by paying the demonstration fee of ₹1.</p>
                             </div>
-                        </div>
 
-                        <button
-                            onClick={handlePayment}
-                            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
-                        >
-                            Pay via Razorpay
-                        </button>
-                        <p className="text-xs text-slate-400 italic">Secure payment gateway powered by Razorpay</p>
+                            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-xl text-left space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">Ref ID</span>
+                                    <span className="font-mono font-bold">{createdShipment.referenceId}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500">Amount</span>
+                                    <span className="font-bold">₹1.00</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handlePayment}
+                                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
+                            >
+                                Pay via Razorpay
+                            </button>
+                            <p className="text-xs text-slate-400 italic">Secure payment gateway powered by Razorpay</p>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Step 4: Success */}
-            {step === 4 && (
-                <div className="max-w-md mx-auto animate-in zoom-in-95 duration-500">
-                    <div className="glass-card p-8 text-center space-y-6 border-emerald-500/30">
-                        <div className="h-24 w-24 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <ReceiptText className="h-14 w-14 text-emerald-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white">Booking Requested!</h2>
-                            <p className="text-slate-500 mt-2">
-                                {paymentOption === 'PAY_NOW'
-                                    ? "Payment verified. Your shipment is now in the manager's review queue."
-                                    : "Your shipment request has been submitted with Pay Later option. Our team will review and share payment instructions."
-                                }
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 text-left">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                                        <Package className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-bold">{createdShipment?.referenceId}</h4>
-                                        <span className="text-[10px] text-slate-400 uppercase font-black">Shipment Reference</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
-                                    <div className={`h-2 w-2 rounded-full ${createdShipment?.aiCategorization?.category !== 'UNKNOWN' ? 'bg-indigo-500' : 'bg-slate-300'}`} />
-                                    {createdShipment?.aiCategorization?.category !== 'UNKNOWN' ? (
-                                        <span>AI categorized this as <span className="font-bold text-indigo-600 uppercase">{createdShipment?.aiCategorization?.category}</span></span>
-                                    ) : (
-                                        <span>Manual categorization pending</span>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                    <div>
-                                        <span className="text-slate-400 block mb-1">Status</span>
-                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">Awaiting Approval</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block mb-1">Payment</span>
-                                        {paymentOption === 'PAY_NOW' ? (
-                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">Verified ₹1.00</span>
-                                        ) : (
-                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">Pay Later</span>
-                                        )}
-                                    </div>
-                                </div>
+            {
+                step === 4 && (
+                    <div className="max-w-md mx-auto animate-in zoom-in-95 duration-500">
+                        <div className="glass-card p-8 text-center space-y-6 border-emerald-500/30">
+                            <div className="h-24 w-24 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <ReceiptText className="h-14 w-14 text-emerald-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Booking Requested!</h2>
+                                <p className="text-slate-500 mt-2">
+                                    {paymentOption === 'PAY_NOW'
+                                        ? "Payment verified. Your shipment is now in the manager's review queue."
+                                        : "Your shipment request has been submitted with Pay Later option. Our team will review and share payment instructions."
+                                    }
+                                </p>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3">
-                                <button
-                                    onClick={() => navigate('/app/shipments')}
-                                    className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all"
-                                >
-                                    Track in Shipments
-                                </button>
-                                <button
-                                    onClick={() => navigate('/app/dashboard')}
-                                    className="w-full py-3 text-slate-500 font-bold hover:text-slate-900 transition-all"
-                                >
-                                    Back to Dashboard
-                                </button>
+                            <div className="space-y-4">
+                                <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 text-left">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                            <Package className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold">{createdShipment?.referenceId}</h4>
+                                            <span className="text-[10px] text-slate-400 uppercase font-black">Shipment Reference</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
+                                        <div className={`h-2 w-2 rounded-full ${createdShipment?.aiCategorization?.category !== 'UNKNOWN' ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                                        {createdShipment?.aiCategorization?.category !== 'UNKNOWN' ? (
+                                            <span>AI categorized this as <span className="font-bold text-indigo-600 uppercase">{createdShipment?.aiCategorization?.category}</span></span>
+                                        ) : (
+                                            <span>Manual categorization pending</span>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <span className="text-slate-400 block mb-1">Status</span>
+                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">Awaiting Approval</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block mb-1">Payment</span>
+                                            {paymentOption === 'PAY_NOW' ? (
+                                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">Verified ₹1.00</span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">Pay Later</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    <button
+                                        onClick={() => navigate('/app/shipments')}
+                                        className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all"
+                                    >
+                                        Track in Shipments
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/app/dashboard')}
+                                        className="w-full py-3 text-slate-500 font-bold hover:text-slate-900 transition-all"
+                                    >
+                                        Back to Dashboard
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }

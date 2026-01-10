@@ -15,6 +15,7 @@ import { driverEarningsRouter } from './driverEarnings.routes.js'
 import { simulationRouter } from './simulation.routes.js'
 import { searchRouter } from './search.routes.js'
 import { reviewRouter } from './review.routes.js'
+import documentRegenerateRouter from './documentRegenerate.routes.js'
 
 export const apiRouter = Router()
 
@@ -34,4 +35,5 @@ apiRouter.use('/drivers/earnings', driverEarningsRouter)
 apiRouter.use('/simulation', simulationRouter)
 apiRouter.use('/search', searchRouter)
 apiRouter.use('/reviews', reviewRouter)
+apiRouter.use('/documents', documentRegenerateRouter)
 

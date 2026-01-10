@@ -20,14 +20,14 @@ export default function PredictiveTimeline({ shipment, events }: PredictiveTimel
     // Find current step index
     const currentStepIndex = BASE_STEPS.findIndex(s => s.id === shipment.status) !== -1
         ? BASE_STEPS.findIndex(s => s.id === shipment.status)
-        : (shipment.status === 'DISPATCHED' ? 2 : 0); // fallback mapping
+        : (shipment.status === 'DISPATCHED' ? 3 : 0); // fallback mapping
 
     // Get the most relevant event for a status
     const getEvent = (status: string) => {
         return events?.find(e => {
             if (status === 'CREATED') return e.type === 'SHIPMENT_CREATED';
             if (status === 'ASSIGNED') return e.type === 'SHIPMENT_ASSIGNED';
-            if (status === 'PICKED_UP') return e.type === 'SHIPMENT_PICKED_UP' || e.type === 'SHIPMENT_LOADED'; // 'LOADED' implies picked up largely
+            if (status === 'PICKED_UP') return e.type === 'SHIPMENT_PICKED_UP' || e.type === 'MARK_LOADED'; // 'MARK_LOADED' also implies picked up
             if (status === 'IN_TRANSIT') return e.type === 'SHIPMENT_DISPATCHED' || e.type === 'SHIPMENT_IN_TRANSIT';
             if (status === 'OUT_FOR_DELIVERY') return e.type === 'SHIPMENT_OUT_FOR_DELIVERY';
             if (status === 'DELIVERED') return e.type === 'SHIPMENT_DELIVERED';

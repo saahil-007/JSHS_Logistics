@@ -16,12 +16,15 @@ import {
   FileText,
   Wallet,
   PlusCircle,
-  ScrollText
+  ScrollText,
+  Zap
 } from 'lucide-react'
 
 import { useAuth } from '../auth/AuthContext'
 import { MobileNav } from './MobileNav'
 import { TopNav } from './TopNav'
+import NotificationStrip from './NotificationStrip'
+
 export function Layout() {
   const { user } = useAuth()
   const loc = useLocation()
@@ -62,6 +65,7 @@ export function Layout() {
           items: [
             { to: '/app/shipments', label: 'All Shipments', icon: Package },
             { to: '/app/approvals', label: 'Approvals', icon: Shield },
+            { to: '/app/iot-monitor', label: 'IoT Monitor', icon: Zap },
           ]
         },
         {
@@ -204,6 +208,8 @@ export function Layout() {
             )}
           </AnimatePresence>
 
+          <NotificationStrip />
+
           <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-8 pt-6 bg-[#f8fafc] dark:bg-slate-950 overflow-x-hidden">
             <div className="max-w-7xl mx-auto min-h-full">
               <AnimatePresence mode="wait">
@@ -225,31 +231,6 @@ export function Layout() {
   )
 }
 
-// Add custom scroll styles
-const style = document.createElement('style');
-style.textContent = `
-  .custom-sidebar-scroll::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-sidebar-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 10px;
-  }
-  .custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
-  }
-  .dark .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-    background: #1e293b;
-  }
-  .dark .custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: #334155;
-  }
-`;
-document.head.appendChild(style);
-
 function SidebarLink({
   to,
   label,
@@ -268,8 +249,8 @@ function SidebarLink({
     <Link
       to={to}
       className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all group ${active
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
         }`}
     >
       <Icon className={`h-5 w-5 shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-slate-900 dark:text-slate-500 dark:group-hover:text-white'}`} />

@@ -15,6 +15,20 @@ const createVehicleSchema = z.object({
   capacityKg: z.number().positive().optional(),
   fuelType: z.enum(['DIESEL', 'PETROL', 'ELECTRIC', 'CNG']).optional(),
   type: z.enum(['TRUCK_LG', 'TRUCK_SM', 'VAN', 'BIKE']).optional(),
+
+  // Advanced Health Metrics
+  batteryVoltage: z.number().optional(),
+  batteryHealthPercent: z.number().optional(),
+  engineStatus: z.enum(['OFF', 'IDLE', 'RUNNING', 'WARNING']).optional(),
+  engineLoadPercent: z.number().optional(),
+  oilLifeRemainingPercent: z.number().optional(),
+  tirePressurePsi: z.object({
+    frontLeft: z.number().optional(),
+    frontRight: z.number().optional(),
+    rearLeft: z.number().optional(),
+    rearRight: z.number().optional()
+  }).optional(),
+  coolantTempC: z.number().optional(),
 })
 
 const updateVehicleSchema = createVehicleSchema.partial()

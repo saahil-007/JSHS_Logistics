@@ -174,6 +174,18 @@ export default function ShipmentDetail() {
     }
   }
 
+  async function pickup() {
+    if (!id) return;
+    try {
+      await api.post(`/shipments/${id}/pickup`);
+      await shipmentData.refetch();
+      toast.success('Shipment marked as PICKED UP');
+    } catch (error) {
+      const apiError = handleApiError(error);
+      toast.error(`Failed to mark as picked up: ${apiError.message}`);
+    }
+  }
+
   async function handleRequestOtp(type: 'START' | 'COMPLETE') {
     if (!id) return
     try {
@@ -508,6 +520,14 @@ export default function ShipmentDetail() {
               )}
               {shipment.status === 'ASSIGNED' && (
                 <button
+                  onClick={pickup}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  Mark Picked Up
+                </button>
+              )}
+              {shipment.status === 'PICKED_UP' && (
+                <button
                   onClick={dispatch}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all"
                 >
@@ -544,7 +564,13 @@ export default function ShipmentDetail() {
                   }} className="btn-ghost border-rose-200 text-rose-600 hover:bg-rose-50">Reject</button>
                 </>
               )}
-              {['PICKED_UP', 'ASSIGNED'].includes(shipment.status) && (
+              {shipment.status === 'ASSIGNED' && (
+                <button onClick={pickup} className="btn-primary bg-amber-600 hover:bg-amber-700 shadow-amber-500/20 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Mark Picked Up
+                </button>
+              )}
+              {shipment.status === 'PICKED_UP' && (
                 <button onClick={startDelivery} className="btn-primary bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 flex items-center gap-2">
                   <Navigation className="h-4 w-4" />
                   Start Journey

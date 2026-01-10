@@ -27,6 +27,18 @@ type VehicleIotData = {
     isRefrigerated: boolean;
     currentTemperatureC?: number;
     temperatureThresholdMaxC?: number;
+    batteryVoltage?: number;
+    batteryHealthPercent?: number;
+    engineStatus?: 'OFF' | 'IDLE' | 'RUNNING' | 'WARNING';
+    engineLoadPercent?: number;
+    oilLifeRemainingPercent?: number;
+    tirePressurePsi?: {
+        frontLeft: number;
+        frontRight: number;
+        rearLeft: number;
+        rearRight: number;
+    };
+    coolantTempC?: number;
     currentLocation?: {
         lat: number;
         lng: number;
@@ -44,7 +56,7 @@ export default function IotMonitor() {
     const vehiclesQuery = useQuery({
         queryKey: ['fleetIot'],
         queryFn: async () => {
-            const res = await api.get('/fleet');
+            const res = await api.get('/fleet/vehicles');
             return res.data.vehicles as VehicleIotData[];
         },
         refetchInterval: 30000,
@@ -80,6 +92,8 @@ export default function IotMonitor() {
                 [data.vehicleId]: {
                     currentFuelLiters: data.fuel,
                     currentTemperatureC: data.temp,
+                    batteryVoltage: data.batteryVoltage,
+                    engineStatus: data.engineStatus,
                     currentLocation: {
                         lat: data.lat,
                         lng: data.lng,
@@ -114,7 +128,9 @@ export default function IotMonitor() {
     const alertVehicles = vehicles.filter(v =>
         v.status === 'MAINTENANCE' ||
         v.currentFuelLiters < v.fuelThresholdLowLiters ||
-        (v.isRefrigerated && v.currentTemperatureC && v.temperatureThresholdMaxC && v.currentTemperatureC > v.temperatureThresholdMaxC)
+        (v.isRefrigerated && v.currentTemperatureC && v.temperatureThresholdMaxC && v.currentTemperatureC > v.temperatureThresholdMaxC) ||
+        (v.batteryHealthPercent && v.batteryHealthPercent < 70) ||
+        (v.engineStatus === 'WARNING')
     );
 
     return (
@@ -144,7 +160,7 @@ export default function IotMonitor() {
                     </div>
 
                     <div className="flex gap-4">
-                        <StatCard label="Active Sensors" value={vehicles.length * 3} icon={Activity} />
+                        <StatCard label="Active Sensors" value={vehicles.length * 8} icon={Activity} />
                         <StatCard label="Critical Alerts" value={alertVehicles.length} icon={AlertCircle} isAlert />
                     </div>
                 </div>
@@ -174,17 +190,27 @@ export default function IotMonitor() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     className={`glass-card overflow-hidden group border-t-4 transition-all duration-500 ${vehicle._id === highlightId
-                                            ? 'ring-4 ring-blue-500 ring-offset-4 dark:ring-offset-slate-900 border-t-blue-600 scale-[1.02]'
-                                            : vehicle.status === 'IN_USE'
-                                                ? 'border-t-blue-500'
-                                                : 'border-t-slate-300 dark:border-t-slate-700'
+                                        ? 'ring-4 ring-blue-500 ring-offset-4 dark:ring-offset-slate-900 border-t-blue-600 scale-[1.02]'
+                                        : vehicle.status === 'IN_USE'
+                                            ? 'border-t-blue-500'
+                                            : 'border-t-slate-300 dark:border-t-slate-700'
                                         }`}
                                 >
                                     <div className="p-5">
                                         <div className="flex items-start justify-between mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold group-hover:text-blue-500 transition-colors">{vehicle.plateNumber}</h3>
-                                                <p className="text-xs text-slate-500 font-medium uppercase">{vehicle.model || 'Standard Truck'}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs text-slate-500 font-medium uppercase">{vehicle.model || 'Standard Truck'}</span>
+                                                    {vehicle.engineStatus && (
+                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${vehicle.engineStatus === 'RUNNING' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                            vehicle.engineStatus === 'WARNING' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                                'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                                            }`}>
+                                                            Engine {vehicle.engineStatus}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${vehicle.status === 'IN_USE'
                                                 ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
@@ -203,13 +229,13 @@ export default function IotMonitor() {
                                                     </span>
                                                     <span className={`font-black ${vehicle.currentFuelLiters < vehicle.fuelThresholdLowLiters ? 'text-red-500 animate-pulse' : 'text-slate-900 dark:text-white'
                                                         }`}>
-                                                        {vehicle.currentFuelLiters.toFixed(1)} / {vehicle.fuelCapacityLiters} L
+                                                        {(vehicle.currentFuelLiters ?? 0).toFixed(1)} / {vehicle.fuelCapacityLiters} L
                                                     </span>
                                                 </div>
                                                 <div className="h-3 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-slate-200/50 dark:border-white/5">
                                                     <motion.div
                                                         initial={false}
-                                                        animate={{ width: `${(vehicle.currentFuelLiters / vehicle.fuelCapacityLiters) * 100}%` }}
+                                                        animate={{ width: `${((vehicle.currentFuelLiters ?? 0) / vehicle.fuelCapacityLiters) * 100}%` }}
                                                         className={`h-full rounded-full ${vehicle.currentFuelLiters < vehicle.fuelThresholdLowLiters
                                                             ? 'bg-gradient-to-r from-red-500 to-orange-500'
                                                             : 'bg-gradient-to-r from-blue-500 to-cyan-400'
@@ -229,7 +255,7 @@ export default function IotMonitor() {
                                                             ? 'text-red-500 animate-pulse'
                                                             : 'text-green-500'
                                                             }`}>
-                                                            {vehicle.currentTemperatureC ? `${vehicle.currentTemperatureC.toFixed(1)}°C` : 'Initializing...'}
+                                                            {vehicle.currentTemperatureC !== undefined ? `${vehicle.currentTemperatureC.toFixed(1)}°C` : 'Initializing...'}
                                                         </span>
                                                     </div>
                                                     <div className="flex gap-1 h-3">
@@ -253,12 +279,34 @@ export default function IotMonitor() {
                                                 </div>
                                             )}
 
-                                            <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500">
-                                                <div className="flex items-center gap-1.5">
-                                                    <MapPin className="h-3 w-3" />
-                                                    {vehicle.currentLocation ? `${vehicle.currentLocation.lat.toFixed(4)}, ${vehicle.currentLocation.lng.toFixed(4)}` : 'Wait for signal...'}
+                                            {/* Health Metrics Grid */}
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400">Battery</span>
+                                                        <Zap className={`h-3 w-3 ${vehicle.batteryHealthPercent && vehicle.batteryHealthPercent < 50 ? 'text-red-500' : 'text-green-500'}`} />
+                                                    </div>
+                                                    <div className="text-lg font-black">{vehicle.batteryVoltage?.toFixed(1) || '12.6'}V</div>
+                                                    <div className="text-[10px] text-slate-500 mt-1">Health: {vehicle.batteryHealthPercent || 95}%</div>
                                                 </div>
-                                                <div className="flex items-center gap-1">
+                                                <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400">Oil Life</span>
+                                                        <Activity className={`h-3 w-3 ${vehicle.oilLifeRemainingPercent && vehicle.oilLifeRemainingPercent < 20 ? 'text-red-500' : 'text-blue-500'}`} />
+                                                    </div>
+                                                    <div className="text-lg font-black">{vehicle.oilLifeRemainingPercent || 100}%</div>
+                                                    <div className="text-[10px] text-slate-500 mt-1">Next Service: {(vehicle.oilLifeRemainingPercent || 100) * 50}km</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500">
+                                                <div className="flex items-center gap-1.5 w-full">
+                                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                    <span className="truncate max-w-[150px]">
+                                                        {vehicle.currentLocation ? `${vehicle.currentLocation.lat.toFixed(4)}, ${vehicle.currentLocation.lng.toFixed(4)}` : 'Wait for signal...'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1 flex-shrink-0">
                                                     <Zap className="h-3 w-3 text-amber-500" />
                                                     98% Signal
                                                 </div>

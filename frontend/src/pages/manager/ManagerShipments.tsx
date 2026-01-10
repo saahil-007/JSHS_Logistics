@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, Truck, X, LayoutGrid, LayoutList, ChevronLeft, ChevronRight, Filter, Zap } from 'lucide-react'
+import { Plus, Truck, X, LayoutGrid, LayoutList, ChevronLeft, ChevronRight, Filter, Zap } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { useDebounce } from '../../hooks/useDebounce'
 import type { Shipment } from '../../types'
 import { SHIPMENT_TYPES } from '../../constants'
 import ErrorDisplay from '../../components/ErrorDisplay'
@@ -14,24 +13,22 @@ import TrackingModal from '../../components/TrackingModal'
 
 export default function ManagerShipments() {
     const [page, setPage] = useState(1)
-    const [search, setSearch] = useState('')
     const [status, setStatus] = useState<string>('')
     const [type, setType] = useState<string>('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
     const [trackingShipmentId, setTrackingShipmentId] = useState<string | null>(null)
 
-    const debouncedSearch = useDebounce(search, 300)
+
 
     const [activeTab, setActiveTab] = useState<'active' | 'past'>('active')
 
     const { data, isLoading, isError, refetch, isPlaceholderData } = useQuery({
-        queryKey: ['manager-shipments', page, debouncedSearch, status, type, activeTab],
+        queryKey: ['manager-shipments', page, status, type, activeTab],
         queryFn: async () => {
             const res = await api.get('/shipments', {
                 params: {
                     page,
-                    search: debouncedSearch,
                     status: status || undefined,
                     shipmentType: type || undefined,
                     tab: activeTab, // Let the backend handle tab filtering if possible, or filter locally if not
@@ -45,7 +42,7 @@ export default function ManagerShipments() {
 
     useEffect(() => {
         setPage(1)
-    }, [debouncedSearch, status, type, activeTab])
+    }, [status, type, activeTab])
 
     if (isError) return <ErrorDisplay message="Cloud synchronization failed." onRetry={refetch} />
 
@@ -115,14 +112,9 @@ export default function ManagerShipments() {
 
             {/* Intelligent Filter Bar */}
             <div className="glass-frame p-2 flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
-                <div className="relative group flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search by ID, Origin, Destination, or Consignor..."
-                        className="w-full bg-transparent pl-12 pr-4 py-3 text-sm font-bold focus:outline-none placeholder:text-slate-400 dark:text-white"
-                    />
+                <div className="flex-1 flex items-center gap-2 px-4">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Filter Management Active</span>
                 </div>
 
                 <div className="h-6 w-px bg-slate-200 dark:bg-white/10 hidden lg:block" />
@@ -162,9 +154,9 @@ export default function ManagerShipments() {
                         </select>
                     </div>
 
-                    {(status || type || search) && (
+                    {(status || type) && (
                         <button
-                            onClick={() => { setStatus(''); setType(''); setSearch(''); }}
+                            onClick={() => { setStatus(''); setType(''); }}
                             className="text-[10px] font-black text-rose-500 hover:text-rose-600 px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 uppercase tracking-widest"
                         >
                             <X className="h-3 w-3" />

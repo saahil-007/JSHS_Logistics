@@ -11,7 +11,13 @@ import { createNotification } from '../services/notificationService.js';
  */
 export async function handleCustomerCreateShipment(req, res) {
     const customerId = req.user._id;
-    const { origin, destination, packageDetails, deliveryType, goodsImages, paymentOption, pricingMode, customPrice, category, customCategory } = req.body;
+    const { origin, destination, packageDetails, deliveryType, goodsImages, paymentOption, pricingMode, customPrice, category, customCategory, consigneeName, consigneeContact } = req.body;
+
+    // Validate consignee contact (Indian phone number)
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!consigneeContact || !phoneRegex.test(consigneeContact)) {
+        return res.status(400).json({ error: 'Valid 10-digit consignee contact number is required for delivery OTP verification' });
+    }
 
     // Default to PAY_NOW to preserve existing behaviour if client doesn't send this field
     const selectedPaymentOption = paymentOption === 'PAY_LATER' ? 'PAY_LATER' : 'PAY_NOW';
@@ -29,7 +35,9 @@ export async function handleCustomerCreateShipment(req, res) {
                 pricingMode,
                 customPrice,
                 category,
-                customCategory
+                customCategory,
+                consigneeName,
+                consigneeContact
             }
         });
 

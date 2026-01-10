@@ -9,11 +9,12 @@ type Item = { to: string; label: string; roles?: Role[] }
 const ALL_ITEMS: Item[] = [
   { to: '/app/dashboard', label: 'Dashboard' },
   { to: '/app/analytics', label: 'Analytics', roles: ['MANAGER'] },
-  
+
   // Manager
   { to: '/app/fleet', label: 'Fleet', roles: ['MANAGER'] },
   { to: '/app/drivers', label: 'Drivers', roles: ['MANAGER'] },
   { to: '/app/fleet-performance', label: 'Performance', roles: ['MANAGER'] },
+  { to: '/app/iot-monitor', label: 'IoT Monitor', roles: ['MANAGER'] },
   { to: '/app/approvals', label: 'Approvals', roles: ['MANAGER'] },
   { to: '/app/documents', label: 'Documents', roles: ['MANAGER'] },
   { to: '/app/audit', label: 'Audit Logs', roles: ['MANAGER'] },
@@ -74,9 +75,9 @@ export function MobileNav({ open, onClose, role }: { open: boolean; onClose: () 
               </Link>
             )
           })}
-          
+
           <div className="my-2 h-px bg-slate-200 dark:bg-white/10" />
-          
+
           <button
             onClick={() => {
               logout()

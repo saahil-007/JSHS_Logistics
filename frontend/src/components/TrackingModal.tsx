@@ -290,7 +290,9 @@ export default function TrackingModal({ shipmentId, onClose }: TrackingModalProp
                                                                 <div className="relative pl-8 space-y-4 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-blue-500 before:via-blue-300 before:to-slate-200 dark:before:to-slate-700">
                                                                     {milestones.map((m, idx) => {
                                                                         const isCompleted = !!m.date;
-                                                                        const isCurrent = data.shipment.status === m.key || (m.key === 'IN_TRANSIT' && ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'PICKED_UP'].includes(data.shipment.status));
+                                                                        const isCurrent = data.shipment.status === m.key ||
+                                                                            (m.key === 'IN_TRANSIT' && ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DISPATCHED'].includes(data.shipment.status)) ||
+                                                                            (m.key === 'PICKED_UP' && data.shipment.status === 'PICKED_UP');
                                                                         const relatedEvent = data.recentEvents?.find((e: any) =>
                                                                             e.type === `SHIPMENT_${m.key}` ||
                                                                             (m.key === 'PICKED_UP' && (e.type === 'SHIPMENT_PICKED_UP' || e.type === 'MARK_LOADED')) ||

@@ -20,7 +20,7 @@ import { getVehicleHealthStatus, getFleetHealth } from '../services/gpsTrackingS
 import { predictDelayRisk } from '../services/predictiveAnalyticsService.js'
 import { generateOtp } from '../utils/otp.js'
 import * as pricingService from '../services/pricingService.js'
-import { sendInvoiceEmail } from '../services/emailService.js'
+import { sendInvoiceEmail, sendOtpEmail } from '../services/emailService.js'
 
 const pointSchema = z.object({
   name: z.string().min(1),
@@ -36,7 +36,7 @@ const createSchema = z.object({
   customerId: z.string().optional(),
   consignee: z.object({
     name: z.string().optional(),
-    contact: z.string().optional()
+    contact: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number').optional()
   }).optional(),
   eta: z.string().datetime().optional(),
   package: z.object({
@@ -69,6 +69,10 @@ const updateSchema = z.object({
   customerId: z.union([z.string().min(1), z.null()]).optional(),
   eta: z.union([z.string().datetime(), z.null()]).optional(),
   status: z.enum(['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELAYED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CLOSED', 'CANCELLED']).optional(),
+  consignee: z.object({
+    name: z.string().optional(),
+    contact: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number').optional()
+  }).optional(),
 })
 
 const assignSchema = z.object({
@@ -384,6 +388,7 @@ export async function updateShipment(req, res) {
     ...(typeof data.customerId === 'string' ? { customerId: data.customerId } : {}),
     ...(typeof data.eta === 'string' ? { eta: new Date(data.eta) } : {}),
     ...(data.status ? { status: data.status } : {}),
+    ...(data.consignee ? { consignee: data.consignee } : {}),
   }
 
   const $unset = {
@@ -513,6 +518,10 @@ export async function dispatchShipment(req, res) {
   // Manager can dispatch any, driver can dispatch only their assigned
   if (req.user.role === 'DRIVER' && String(shipment.assignedDriverId ?? '') !== String(req.user._id)) {
     return res.status(403).json({ error: { message: 'Forbidden' } })
+  }
+
+  if (shipment.status !== 'PICKED_UP') {
+    return res.status(400).json({ error: { message: 'Shipment must be PICKED_UP before it can be dispatched' } })
   }
 
   shipment.status = 'IN_TRANSIT'
@@ -1142,8 +1151,8 @@ export async function startShipment(req, res) {
   }
 
   // Check if shipment is in appropriate status to be started
-  if (shipment.status !== 'ASSIGNED' && shipment.status !== 'DISPATCHED') {
-    return res.status(400).json({ error: { message: 'Shipment must be assigned before starting' } });
+  if (shipment.status !== 'PICKED_UP') {
+    return res.status(400).json({ error: { message: 'Shipment must be PICKED_UP before starting journey' } });
   }
 
   // Check if all compliance requirements are met
@@ -1436,39 +1445,29 @@ export async function requestShipmentOtp(req, res) {
       ? (shipment.customerId ? 'Customer' : 'Consignor')
       : (shipment.consignee?.name || 'Receiver');
 
-    // Securely notify the intended recipient of the OTP
-    let targetUserId = null;
+    // Securely transmit the OTP
+    let transmissionStatus = false;
     if (type === 'START') {
-      targetUserId = shipment.customerId;
-    } else {
-      // In a real system, we'd send SMS to shipment.consignee.phone
-      // For this system, we'll notify the manager as well for visibility
-      targetUserId = req.user._id;
-    }
-
-    await createNotification({
-      userId: targetUserId,
-      type: 'SHIPMENT',
-      severity: 'INFO',
-      message: `Verification code for Shipment ${shipment.referenceId} (${type}): ${otp}. Keep this secure.`,
-      metadata: { shipmentId: shipment._id, otpType: type }
-    });
-
-    // Simulated SMS logic
-    let mobileNumber = '+9137998749'; // Default test number
-    if (type === 'START') {
+      // 1. Send to Consignor (Customer) Email
       const customer = await User.findById(shipment.customerId);
-      mobileNumber = customer?.phone || mobileNumber;
-    } else {
-      mobileNumber = shipment.consignee?.contact || mobileNumber;
+      if (customer && customer.email) {
+        await sendOtpEmail(customer.email, otp, 'SHIPMENT_START');
+        transmissionStatus = true;
+      }
+    } else if (type === 'COMPLETE') {
+      // 2. Send to Consignee Phone via Twilio
+      const body = `Your delivery confirmation code for Shipment ${shipment.referenceId} is ${otp}. Please share this with the driver only at the time of delivery.`;
+      const contact = shipment.consignee?.contact;
+      if (contact) {
+        transmissionStatus = await sendSMS(contact, body);
+      }
     }
-
-    // Lazy import sendSMS if not available (assuming it might be in an email/sms service)
-    // console.log(`[SMS Simulation] To: ${mobileNumber}, Msg: Your OTP for ${shipment.referenceId} is ${otp}`);
 
     res.json({
       success: true,
-      message: `OTP securely transmitted to ${recipientRole} (${recipientName}).`
+      message: transmissionStatus
+        ? `OTP securely transmitted to ${recipientRole} (${recipientName}).`
+        : `OTP generated but transmission failed. Failsafe: check notifications.`
     });
   } catch (err) {
     console.error('CRITICAL Error in requestShipmentOtp:', err);
@@ -1558,7 +1557,7 @@ export async function automateJourneyPaperwork(req, res) {
 
     res.json({ shipment, message: `${docType} automated successfully` });
   } catch (err) {
-    console.error('Error in automateJourneyPaperwork:', err);
+    console.error('Paperwork Automation Failed:', err);
     res.status(500).json({ error: { message: err.message || 'Internal Server Error' } });
   }
 }
