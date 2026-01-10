@@ -21,6 +21,13 @@ const userSchema = new mongoose.Schema(
     address: { type: String, trim: true },
     gstNumber: { type: String, trim: true },
     legalName: { type: String, trim: true }, // If different from name
+
+    // Driver specific trustworthiness fields
+    licenseNumber: { type: String, trim: true },
+    challansCount: { type: Number, default: 0 },
+    verifiedBadges: [{ type: String }],
+    totalTrips: { type: Number, default: 0 },
+    yearsOfExperience: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

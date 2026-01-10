@@ -72,7 +72,8 @@ const ALL_CATEGORIES = [
     { id: 'air', label: 'Air Freight', icon: Plane, roles: ['MANAGER', 'CUSTOMER'] },
     { id: 'road', label: 'Road Freight', icon: Truck, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
     { id: 'customs', label: 'Customs', icon: Globe, roles: ['MANAGER', 'CUSTOMER'] },
-    { id: 'consignor-wise', label: 'Consignor Wise', icon: Users, roles: ['MANAGER'] }, // New Section
+    { id: 'consignor-wise', label: 'Consignor Wise', icon: Users, roles: ['MANAGER'] },
+    { id: 'customer-wise', label: 'Customer-wise', icon: Users, roles: ['MANAGER'] },
     { id: 'shipment', label: 'Shipment-wise', icon: Zap, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
     { id: 'driver', label: 'Driver-wise', icon: Shield, roles: ['MANAGER', 'DRIVER'] },
     { id: 'vehicle', label: 'Vehicle-wise', icon: RefreshCw, roles: ['MANAGER', 'DRIVER'] },
@@ -96,6 +97,7 @@ export default function Documents() {
     const apiCategory = useMemo(() => {
         if (!category) return undefined
         if (category === 'consignor-wise') return 'CONSIGNOR'
+        if (category === 'customer-wise') return 'CUSTOMER'
         return category.toUpperCase()
     }, [category])
 

@@ -114,3 +114,47 @@ export async function placeDetails(req, res) {
         res.status(500).json({ error: { message: 'Internal server error' } })
     }
 }
+
+/**
+ * Reverse geocode coordinates to an address using OpenStreetMap Nominatim
+ */
+export async function reverseGeocode(req, res) {
+    const { lat, lng } = req.query
+
+    if (!lat || !lng) {
+        return res.status(400).json({ error: { message: 'Latitude and Longitude are required' } })
+    }
+
+    try {
+        const url = `${NOMINATIM_BASE}/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`
+
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': USER_AGENT
+            }
+        })
+
+        if (!response.ok) {
+            console.error('Nominatim Reverse Error:', response.status)
+            return res.status(502).json({ error: { message: 'Reverse geocoding failed' } })
+        }
+
+        const data = await response.json()
+
+        if (!data || data.error) {
+            return res.status(404).json({ error: { message: 'Location not found' } })
+        }
+
+        res.json({
+            name: data.name || data.display_name.split(',')[0],
+            address: data.display_name,
+            location: {
+                lat: parseFloat(data.lat),
+                lng: parseFloat(data.lon)
+            }
+        })
+    } catch (error) {
+        console.error('Reverse Geocode Proxy Error:', error)
+        res.status(500).json({ error: { message: 'Internal server error' } })
+    }
+}

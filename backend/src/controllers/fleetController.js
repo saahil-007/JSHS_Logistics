@@ -120,3 +120,15 @@ export async function rejectDriver(req, res) {
 
   res.json({ driver })
 }
+
+export async function getDriverProfile(req, res) {
+  const driver = await User.findById(req.params.id)
+    .select('-passwordHash')
+    .lean()
+
+  if (!driver || driver.role !== 'DRIVER') {
+    return res.status(404).json({ error: { message: 'Driver not found' } })
+  }
+
+  res.json({ driver })
+}

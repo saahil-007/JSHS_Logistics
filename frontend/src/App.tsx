@@ -25,6 +25,7 @@ import CustomerCreateShipment from './pages/customer/CustomerCreateShipment'
 import PendingApprovals from './pages/manager/PendingApprovals'
 import Documents from './pages/manager/Documents'
 import IotMonitor from './pages/manager/IotMonitor'
+import Profile from './pages/common/Profile'
 import { getAppType } from './utils/subdomainUtils'
 import VapiWidget from './components/VapiWidget'
 
@@ -181,6 +182,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<Notifications />} />
         </Route>
 

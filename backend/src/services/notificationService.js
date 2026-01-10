@@ -6,6 +6,10 @@ import { getShipmentStatusTemplate } from '../utils/mailTemplates.js'
 
 
 export async function createNotification({ userId, type, severity = 'INFO', message, metadata }) {
+  if (!userId) {
+    console.warn(`[NOTIF] Skipping notification of type ${type} - No userId provided.`);
+    return null;
+  }
   const doc = await Notification.create({ userId, type, severity, message, metadata })
 
   const io = getIO()

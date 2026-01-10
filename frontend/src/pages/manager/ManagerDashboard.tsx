@@ -10,7 +10,6 @@ import {
     Truck,
     BarChart3,
     Users,
-    Search,
     ArrowRight,
     TrendingUp,
     AlertCircle,
@@ -78,68 +77,27 @@ export default function ManagerDashboard() {
                                 Enterprise Manager Control
                             </span>
                         </div>
-                        <div>
-                            <h1 className="text-5xl font-black tracking-tight mb-2 leading-none">
-                                Welcome, {user?.name.split(' ')[0]}
-                            </h1>
-                            <p className="text-slate-400 font-medium text-lg max-w-lg">
-                                Your logistical ecosystem is operating at <span className="text-emerald-400 font-black">optimal efficiency</span>.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 max-w-xl">
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tighter mb-1 leading-none">
+                                    Welcome, {user?.name?.split(' ')[0]}
+                                </h1>
+                                <p className="text-slate-400 font-bold text-sm tracking-wide">
+                                    OVERVIEW • <span className="text-emerald-400">OPTIMAL EFFICIENCY</span>
+                                </p>
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Search shipments, documents, or fleet assets..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:bg-white/10 focus:border-blue-500/50 focus:outline-none transition-all placeholder:text-slate-500 font-medium"
-                            />
-                            <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
-                                <span className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-black text-slate-500 font-mono">CTRL + K</span>
+                            <div className="flex items-center gap-4">
+                                <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white focus:outline-none hover:bg-white/10 transition-colors appearance-none cursor-pointer min-w-[140px]">
+                                    <option className="bg-slate-900">System Logs</option>
+                                    <option className="bg-slate-900">Resource Map</option>
+                                    <option className="bg-slate-900">Audit Vault</option>
+                                </select>
+                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${simStatusQuery.data?.running ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-slate-500'}`}>
+                                    <Activity className={`h-4 w-4 ${simStatusQuery.data?.running ? 'animate-pulse' : ''}`} />
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="h-14 w-[1px] bg-white/5 hidden lg:block" />
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">System Action</span>
-                            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none hover:bg-white/10 transition-colors appearance-none cursor-pointer">
-                                <option className="bg-slate-900">Explore Records</option>
-                                <option className="bg-slate-900">Generate POD</option>
-                                <option className="bg-slate-900">Audit Vault</option>
-                                <option className="bg-slate-900">Fleet Map</option>
-                            </select>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${simStatusQuery.data?.running ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-slate-500'}`}>
-                                <Activity className={`h-5 w-5 ${simStatusQuery.data?.running ? 'animate-pulse' : ''}`} />
-                            </div>
-                            <span className="text-[8px] font-black text-slate-500 uppercase mt-1">Status</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Minimalist Stats Overlay */}
-                <div className="relative grid grid-cols-2 md:grid-cols-4 gap-12 mt-12 pt-10 border-t border-white/5">
-                    {[
-                        { label: 'Network Health', value: '99.8%', trend: '+0.2%' },
-                        { label: 'On-Time Delivery', value: `${kpis?.onTimeRate || 92}%`, trend: '+4%' },
-                        { label: 'Active Assets', value: kpis?.shipmentsInTransit || 0, trend: 'Busy' },
-                        { label: 'Daily Volume', value: kpis?.shipmentsTotal || 0, trend: 'Normal' }
-                    ].map((stat, i) => (
-                        <div key={i} className="space-y-1">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{stat.label}</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black text-white">{stat.value}</span>
-                                <span className="text-[10px] font-bold text-emerald-400">{stat.trend}</span>
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </motion.div>
 

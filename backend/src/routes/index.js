@@ -13,6 +13,7 @@ import locationRoutes from './locationRoutes.js'
 import { customerRouter } from './customer.routes.js'
 import { driverEarningsRouter } from './driverEarnings.routes.js'
 import { simulationRouter } from './simulation.routes.js'
+import { searchRouter } from './search.routes.js'
 
 export const apiRouter = Router()
 
@@ -30,4 +31,5 @@ apiRouter.use('/locations', locationRoutes)
 apiRouter.use('/customer', customerRouter)
 apiRouter.use('/drivers/earnings', driverEarningsRouter)
 apiRouter.use('/simulation', simulationRouter)
+apiRouter.use('/search', searchRouter)
 

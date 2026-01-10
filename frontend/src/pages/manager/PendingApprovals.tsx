@@ -41,7 +41,8 @@ export default function PendingApprovals() {
             setSelectedShipment(null)
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.error || 'Approval failed')
+            const msg = err.response?.data?.error?.message || err.response?.data?.error || 'Approval failed'
+            toast.error(typeof msg === 'string' ? msg : 'Approval failed')
         }
     })
 
@@ -57,7 +58,8 @@ export default function PendingApprovals() {
             setRejectionReason('')
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.error || 'Rejection failed')
+            const msg = err.response?.data?.error?.message || err.response?.data?.error || 'Rejection failed'
+            toast.error(typeof msg === 'string' ? msg : 'Rejection failed')
         }
     })
 

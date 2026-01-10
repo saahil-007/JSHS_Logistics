@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { X, ExternalLink, ShieldCheck, CheckCircle2, Circle, Clock, MapPin, Truck, AlertTriangle } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Circle, Clock, MapPin, Truck, AlertTriangle } from 'lucide-react';
 import EnhancedTrackingMap from './EnhancedTrackingMap';
-import type { Shipment, LocationPing, ShipmentEvent, VehicleHealthStatus } from '../types';
+import type { Shipment, LocationPing, ShipmentEvent } from '../types';
 import { useAuth } from '../auth/AuthContext';
 
 interface LiveShipmentTrackerProps {
@@ -11,10 +11,9 @@ interface LiveShipmentTrackerProps {
     events: ShipmentEvent[];
     onClose?: () => void;
     isDialog?: boolean;
-    vehicleHealth?: VehicleHealthStatus | null;
 }
 
-export default function LiveShipmentTracker({ shipment, locations, liveLocation, events, onClose, isDialog = false, vehicleHealth }: LiveShipmentTrackerProps) {
+export default function LiveShipmentTracker({ shipment, locations, liveLocation, events, onClose, isDialog = false }: LiveShipmentTrackerProps) {
     const { user } = useAuth();
     const role = user?.role || 'CUSTOMER';
 
@@ -78,8 +77,8 @@ export default function LiveShipmentTracker({ shipment, locations, liveLocation,
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <h3 className={`text-[11px] font-black uppercase tracking-[0.2em] ${role === 'DRIVER' ? 'text-emerald-500' :
-                                    role === 'CUSTOMER' ? 'text-blue-500' :
-                                        'text-rose-500'
+                                role === 'CUSTOMER' ? 'text-blue-500' :
+                                    'text-rose-500'
                                 }`}>
                                 {getTimelineTitle()}
                             </h3>
@@ -93,8 +92,8 @@ export default function LiveShipmentTracker({ shipment, locations, liveLocation,
                                 animate={{ width: `${shipment.progressPercentage || 0}%` }}
                                 transition={{ duration: 1, ease: "easeOut" }}
                                 className={`h-full rounded-full ${role === 'DRIVER' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
-                                        role === 'CUSTOMER' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                            'bg-gradient-to-r from-rose-500 to-rose-600'
+                                    role === 'CUSTOMER' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                                        'bg-gradient-to-r from-rose-500 to-rose-600'
                                     }`}
                             />
                         </div>
@@ -172,30 +171,7 @@ export default function LiveShipmentTracker({ shipment, locations, liveLocation,
                                         {/* Role-Specific Details */}
                                         {isCompleted && (
                                             <>
-                                                {/* Manager View - Most Detailed */}
-                                                {role === 'MANAGER' && (
-                                                    <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-white/5 space-y-2">
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest px-2 py-0.5 bg-emerald-500/10 rounded-md">✓ Verified</span>
-                                                            <span className="text-[9px] text-slate-400 font-mono">ID: {Math.random().toString(36).substr(2, 8).toUpperCase()}</span>
-                                                        </div>
-                                                        {relatedEvent?.actorId && (
-                                                            <div className="text-[9px] text-slate-500">
-                                                                <span className="font-bold">Actor:</span> {relatedEvent.actorId.toString().slice(-8)}
-                                                            </div>
-                                                        )}
-                                                        {relatedEvent?.location && (
-                                                            <div className="text-[9px] text-slate-500">
-                                                                <span className="font-bold">Location:</span> {relatedEvent.location.name || `${relatedEvent.location.lat?.toFixed(4)}, ${relatedEvent.location.lng?.toFixed(4)}`}
-                                                            </div>
-                                                        )}
-                                                        {relatedEvent?.description && (
-                                                            <div className="text-[9px] text-slate-600 dark:text-slate-400 italic">
-                                                                {relatedEvent.description}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+
 
                                                 {/* Customer View - Delivery Updates */}
                                                 {role === 'CUSTOMER' && relatedEvent?.description && (
@@ -253,35 +229,10 @@ export default function LiveShipmentTracker({ shipment, locations, liveLocation,
                     </div>
                 </div>
 
-                {/* Critical Monitoring (Manager only) */}
-                {role === 'MANAGER' && vehicleHealth && (
-                    <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/5">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-rose-500 mb-2">
-                            <AlertTriangle className="h-3 w-3" /> System Diagnostics
-                        </div>
-                        <div className={`p-4 rounded-xl border-2 ${vehicleHealth.status === 'HEALTHY' ? 'bg-slate-50 dark:bg-white/5 border-emerald-500/20' : 'bg-rose-50/50 border-rose-500/20'}`}>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Health Integrity</div>
-                                    <div className="text-xl font-black text-slate-900 dark:text-white">{vehicleHealth.healthScore}%</div>
-                                </div>
-                                <div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Status Protocol</div>
-                                    <div className={`text-xs font-black uppercase ${vehicleHealth.status === 'HEALTHY' ? 'text-emerald-500' : 'text-rose-500'}`}>{vehicleHealth.status}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+
             </div>
 
-            {/* Footer Actions */}
-            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-white/5 shrink-0">
-                <a href={`/app/shipment/${shipment._id}`} className="btn-primary w-full flex items-center justify-center gap-2 py-3 shadow-lg shadow-blue-500/20">
-                    <ExternalLink className="h-4 w-4" />
-                    Open Full Command Center
-                </a>
-            </div>
+
         </div>
     );
 

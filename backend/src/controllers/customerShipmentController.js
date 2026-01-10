@@ -146,18 +146,23 @@ export async function approveCustomerShipment(req, res) {
         entityId: shipment._id
     });
 
-    await createNotification({
-        userId: shipment.customerId,
-        message: `Your shipment ${shipment.referenceId} has been approved and assigned!`,
-        type: 'SHIPMENT_APPROVED',
-        severity: 'SUCCESS'
-    });
-    await createNotification({
-        userId: shipment.assignedDriverId,
-        message: `New shipment ${shipment.referenceId} assigned to you.`,
-        type: 'SHIPMENT_ASSIGNED',
-        severity: 'INFO'
-    });
+    if (shipment.customerId) {
+        await createNotification({
+            userId: shipment.customerId,
+            message: `Your shipment ${shipment.referenceId} has been approved and assigned!`,
+            type: 'SHIPMENT_APPROVED',
+            severity: 'SUCCESS'
+        });
+    }
+
+    if (shipment.assignedDriverId) {
+        await createNotification({
+            userId: shipment.assignedDriverId,
+            message: `New shipment ${shipment.referenceId} assigned to you.`,
+            type: 'SHIPMENT_ASSIGNED',
+            severity: 'INFO'
+        });
+    }
 
     res.json({ message: 'Shipment approved successfully', shipment });
 }
@@ -183,12 +188,14 @@ export async function rejectCustomerShipment(req, res) {
         metadata: { reason }
     });
 
-    await createNotification({
-        userId: shipment.customerId,
-        message: `Your shipment ${shipment.referenceId} was rejected. Reason: ${reason}`,
-        type: 'SHIPMENT_REJECTED',
-        severity: 'ERROR'
-    });
+    if (shipment.customerId) {
+        await createNotification({
+            userId: shipment.customerId,
+            message: `Your shipment ${shipment.referenceId} was rejected. Reason: ${reason}`,
+            type: 'SHIPMENT_REJECTED',
+            severity: 'ERROR'
+        });
+    }
 
     res.json({ message: 'Shipment rejected', shipment });
 }

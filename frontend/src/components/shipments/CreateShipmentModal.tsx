@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Loader2, Activity, AlertCircle } from 'lucide-react'
+import { X, MapPin, Loader2, Activity, AlertCircle, Crosshair } from 'lucide-react'
 import { MapContainer, Marker, TileLayer, ZoomControl, ScaleControl, useMapEvents } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
@@ -145,6 +145,45 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
         }
     }
 
+    const getCurrentLocation = (target: 'origin' | 'destination') => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser')
+            return
+        }
+
+        const setLoading = target === 'origin' ? setIsOriginLoading : setIsDestLoading
+        setLoading(true)
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude: lat, longitude: lng } = position.coords
+                    const res = await api.get('/locations/reverse', { params: { lat, lng } })
+                    const { name, address, location } = res.data
+                    const fullAddress = address || name
+
+                    if (target === 'origin') {
+                        setOriginName(fullAddress)
+                        setOriginPos({ lat: location.lat, lng: location.lng })
+                    } else {
+                        setDestinationName(fullAddress)
+                        setDestinationPos({ lat: location.lat, lng: location.lng })
+                    }
+                } catch (err) {
+                    console.error('Reverse geocoding error', err)
+                    alert('Failed to get current location address')
+                } finally {
+                    setLoading(false)
+                }
+            },
+            (error) => {
+                console.error('Geolocation error', error)
+                setLoading(false)
+                alert('Allow location access to use this feature')
+            }
+        )
+    }
+
     const driversQ = useQuery({
         queryKey: ['drivers'],
         queryFn: async () => {
@@ -262,7 +301,7 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
                             <div className="space-y-1.5 relative" ref={originRef}>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Origin Point</label>
                                 <div className="space-y-2">
-                                    <div className="relative">
+                                    <div className="relative group">
                                         <input
                                             value={originName}
                                             onChange={(e) => {
@@ -271,33 +310,41 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
                                             }}
                                             onFocus={() => { if (originSuggestions.length > 0) setShowOriginSuggestions(true) }}
                                             placeholder="Type origin city..."
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                         />
-                                        {isOriginLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />}
-                                        <AnimatePresence>
-                                            {showOriginSuggestions && originSuggestions.length > 0 && (
-                                                <motion.div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-[80] overflow-hidden max-h-60 overflow-y-auto">
-                                                    {originSuggestions.map((s) => (
-                                                        <button key={s.place_id} onClick={() => handleSelectSuggestion('origin', s)} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b last:border-0 transition-colors">
-                                                            <p className="font-semibold">{s.structured_formatting.main_text}</p>
-                                                            <p className="text-xs text-slate-500">{s.structured_formatting.secondary_text}</p>
-                                                        </button>
-                                                    ))}
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                        <button
+                                            type="button"
+                                            onClick={() => getCurrentLocation('origin')}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Use Current Location"
+                                        >
+                                            <Crosshair className={`h-4 w-4 ${isOriginLoading ? 'animate-pulse' : ''}`} />
+                                        </button>
                                     </div>
-                                    <button onClick={() => { setPickerTarget('origin'); setPickerOpen(true); }} className="flex items-center justify-center gap-2 w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors">
-                                        <MapPin className="h-3.5 w-3.5" />
-                                        {originPos ? `${originPos.lat.toFixed(4)}, ${originPos.lng.toFixed(4)}` : 'Set Location on Map'}
-                                    </button>
+                                    {isOriginLoading && <Loader2 className="absolute right-10 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />}
+                                    <AnimatePresence>
+                                        {showOriginSuggestions && originSuggestions.length > 0 && (
+                                            <motion.div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-[80] overflow-hidden max-h-60 overflow-y-auto">
+                                                {originSuggestions.map((s) => (
+                                                    <button key={s.place_id} onClick={() => handleSelectSuggestion('origin', s)} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b last:border-0 transition-colors">
+                                                        <p className="font-semibold">{s.structured_formatting.main_text}</p>
+                                                        <p className="text-xs text-slate-500">{s.structured_formatting.secondary_text}</p>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
+                                <button onClick={() => { setPickerTarget('origin'); setPickerOpen(true); }} className="flex items-center justify-center gap-2 w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {originPos ? `${originPos.lat.toFixed(4)}, ${originPos.lng.toFixed(4)}` : 'Set Location on Map'}
+                                </button>
                             </div>
 
                             <div className="space-y-1.5 relative" ref={destRef}>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Destination Point</label>
                                 <div className="space-y-2">
-                                    <div className="relative">
+                                    <div className="relative group">
                                         <input
                                             value={destinationName}
                                             onChange={(e) => {
@@ -306,27 +353,35 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
                                             }}
                                             onFocus={() => { if (destSuggestions.length > 0) setShowDestSuggestions(true) }}
                                             placeholder="Type destination city..."
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium pr-10"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                                         />
-                                        {isDestLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />}
-                                        <AnimatePresence>
-                                            {showDestSuggestions && destSuggestions.length > 0 && (
-                                                <motion.div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-[80] overflow-hidden max-h-60 overflow-y-auto">
-                                                    {destSuggestions.map((s) => (
-                                                        <button key={s.place_id} onClick={() => handleSelectSuggestion('destination', s)} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b last:border-0 transition-colors">
-                                                            <p className="font-semibold">{s.structured_formatting.main_text}</p>
-                                                            <p className="text-xs text-slate-500">{s.structured_formatting.secondary_text}</p>
-                                                        </button>
-                                                    ))}
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                        <button
+                                            type="button"
+                                            onClick={() => getCurrentLocation('destination')}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Use Current Location"
+                                        >
+                                            <Crosshair className={`h-4 w-4 ${isDestLoading ? 'animate-pulse' : ''}`} />
+                                        </button>
                                     </div>
-                                    <button onClick={() => { setPickerTarget('destination'); setPickerOpen(true); }} className="flex items-center justify-center gap-2 w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors">
-                                        <MapPin className="h-3.5 w-3.5" />
-                                        {destinationPos ? `${destinationPos.lat.toFixed(4)}, ${destinationPos.lng.toFixed(4)}` : 'Set Location on Map'}
-                                    </button>
+                                    {isDestLoading && <Loader2 className="absolute right-10 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />}
+                                    <AnimatePresence>
+                                        {showDestSuggestions && destSuggestions.length > 0 && (
+                                            <motion.div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-[80] overflow-hidden max-h-60 overflow-y-auto">
+                                                {destSuggestions.map((s) => (
+                                                    <button key={s.place_id} onClick={() => handleSelectSuggestion('destination', s)} className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b last:border-0 transition-colors">
+                                                        <p className="font-semibold">{s.structured_formatting.main_text}</p>
+                                                        <p className="text-xs text-slate-500">{s.structured_formatting.secondary_text}</p>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
+                                <button onClick={() => { setPickerTarget('destination'); setPickerOpen(true); }} className="flex items-center justify-center gap-2 w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {destinationPos ? `${destinationPos.lat.toFixed(4)}, ${destinationPos.lng.toFixed(4)}` : 'Set Location on Map'}
+                                </button>
                             </div>
 
                             <div className="space-y-1.5">
@@ -484,7 +539,7 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
                         </div>
                     )}
                 </AnimatePresence>
-            </motion.div>
-        </div>
+            </motion.div >
+        </div >
     )
 }

@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import Modal from '../../components/Modal'
-import { UserPlus, Star, Award, Search, CheckCircle2, Clock } from 'lucide-react'
+import { UserPlus, Star, Award, Search, CheckCircle2, Clock, Shield } from 'lucide-react'
 import Skeleton from '../../components/Skeleton'
+import DriverProfileModal from '../../components/drivers/DriverProfileModal'
 
 type DriverAccount = {
     _id: string
@@ -17,6 +18,8 @@ type DriverAccount = {
 export default function Drivers() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null)
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
     const driversQ = useQuery({
         queryKey: ['fleetDrivers'],
@@ -191,7 +194,16 @@ export default function Drivers() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-right">
-                                        <button className="text-xs font-bold text-blue-600 hover:underline">View Profile</button>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedDriverId(d._id);
+                                                setIsProfileModalOpen(true);
+                                            }}
+                                            className="text-xs font-bold text-blue-600 hover:underline flex items-center justify-end gap-1"
+                                        >
+                                            <Shield className="h-3 w-3" />
+                                            View Profile
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -221,6 +233,15 @@ export default function Drivers() {
                     <button type="submit" className="btn-primary w-full py-3">Send Invitation</button>
                 </form>
             </Modal>
+
+            <DriverProfileModal
+                driverId={selectedDriverId}
+                isOpen={isProfileModalOpen}
+                onClose={() => {
+                    setIsProfileModalOpen(false);
+                    setSelectedDriverId(null);
+                }}
+            />
         </div>
     )
 }

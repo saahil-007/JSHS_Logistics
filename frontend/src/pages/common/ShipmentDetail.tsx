@@ -5,7 +5,6 @@ import 'leaflet/dist/leaflet.css'
 
 import { api } from '../../lib/api'
 import { useShipmentData } from '../../hooks/useShipmentData'
-import { useVehicleHealth } from '../../hooks/useVehicleHealth'
 import { useDateTimeFormatter } from '../../hooks/useDateTimeFormatter'
 import { useAuth } from '../../auth/AuthContext'
 import LiveShipmentTracker from '../../components/LiveShipmentTracker'
@@ -17,7 +16,7 @@ import { getAppType } from '../../utils/subdomainUtils'
 import { shipmentApi, documentApi, simulationApi } from '../../services/apiService'
 import ErrorDisplay from '../../components/ErrorDisplay'
 import Skeleton from '../../components/Skeleton'
-import { FileText, CheckCircle2, Zap, Navigation, BarChart3, MapPin, Settings, Radio, Trash2, Shield, Plus, Upload, Package, Clock } from 'lucide-react'
+import { FileText, CheckCircle2, Zap, Navigation, BarChart3, MapPin, Settings, Radio, Trash2, Shield, Plus, Upload, Package, Clock, Star, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Modal from '../../components/Modal'
 
@@ -53,8 +52,6 @@ export default function ShipmentDetail() {
   const [otpType, setOtpType] = useState<'START' | 'COMPLETE' | null>(null)
 
   const shipmentData = useShipmentData(id);
-
-  const vehicleHealthQuery = useVehicleHealth(shipmentData.shipment);
 
   // Use the original queries for other data
   const docsQ = useQuery({
@@ -571,14 +568,53 @@ export default function ShipmentDetail() {
               locations={shipmentData.locations || []}
               liveLocation={current}
               events={eventsQ.data || []}
-              vehicleHealth={vehicleHealthQuery.data?.healthStatus}
             />
           </div>
 
         </div>
 
-        {/* Right Column: Journey Paperwork Center */}
+        {/* Right Column: Journey Paperwork Center & Driver Info */}
         <div className="space-y-6">
+          {/* Driver Trust Profile (Customer/Manager View) */}
+          {(user?.role === 'CUSTOMER' || isManagerPortal) && shipment.assignedDriverId && typeof shipment.assignedDriverId === 'object' && (
+            <div className="glass-card bg-slate-900 text-white border-none p-6 shadow-2xl relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all" />
+              <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 block">Assigned Logistics Elite</label>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-2xl font-black shadow-lg shadow-blue-500/20 border border-white/10">
+                  {(shipment.assignedDriverId as any).name[0]}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-black text-xl tracking-tight">{(shipment.assignedDriverId as any).name}</h4>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                    <Shield className="h-3 w-3 text-blue-400" />
+                    Vetted Professional
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center hover:bg-white/10 transition-colors">
+                  <Star className="h-4 w-4 text-amber-500 mx-auto mb-1" />
+                  <div className="text-sm font-black">{(shipment.assignedDriverId as any).performanceRating || 5}/5</div>
+                  <div className="text-[8px] font-bold text-slate-500 uppercase">Rating</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center hover:bg-white/10 transition-colors">
+                  <Clock className="h-4 w-4 text-blue-400 mx-auto mb-1" />
+                  <div className="text-sm font-black">{(shipment.assignedDriverId as any).yearsOfExperience || 0}y</div>
+                  <div className="text-[8px] font-bold text-slate-500 uppercase">Exp</div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center hover:bg-white/10 transition-colors">
+                  <AlertTriangle className={`h-4 w-4 mx-auto mb-1 ${(shipment.assignedDriverId as any).challansCount > 0 ? 'text-rose-500' : 'text-emerald-500'}`} />
+                  <div className="text-sm font-black">{(shipment.assignedDriverId as any).challansCount || 0}</div>
+                  <div className="text-[8px] font-bold text-slate-500 uppercase">Challans</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="glass-card border-none shadow-2xl bg-white dark:bg-slate-900 overflow-hidden p-0">
             <div className="p-6 bg-slate-900 text-white">
               <div className="flex items-center justify-between mb-2">

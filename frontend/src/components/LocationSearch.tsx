@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Loader2, X } from 'lucide-react'
+import { MapPin, Loader2, X, Crosshair } from 'lucide-react'
 import { api } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -68,6 +68,38 @@ export default function LocationSearch({ value, onChange, placeholder, className
         }
     }
 
+    const getCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser')
+            return
+        }
+
+        setIsLoading(true)
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude: lat, longitude: lng } = position.coords
+                    const res = await api.get('/locations/reverse', { params: { lat, lng } })
+                    const { name, address, location } = res.data
+                    const fullAddress = address || name
+                    const newLoc = { name: fullAddress, lat: location.lat, lng: location.lng }
+                    setQuery(fullAddress)
+                    onChange(newLoc)
+                } catch (err) {
+                    console.error('Reverse geocoding error', err)
+                    alert('Failed to get current location address')
+                } finally {
+                    setIsLoading(false)
+                }
+            },
+            (error) => {
+                console.error('Geolocation error', error)
+                setIsLoading(false)
+                alert('Allow location access to use this feature')
+            }
+        )
+    }
+
     return (
         <div ref={containerRef} className={`relative ${className}`}>
             <div className="relative group">
@@ -87,11 +119,21 @@ export default function LocationSearch({ value, onChange, placeholder, className
                 {query && !isLoading && (
                     <button
                         onClick={() => { setQuery(''); onChange(null); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-colors"
+                        className="absolute right-10 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-colors"
+                        title="Clear"
                     >
                         <X className="h-3 w-3 text-slate-400" />
                     </button>
                 )}
+                <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    disabled={isLoading}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all disabled:opacity-50"
+                    title="Use Current Location"
+                >
+                    <Crosshair className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
+                </button>
             </div>
 
             <AnimatePresence>

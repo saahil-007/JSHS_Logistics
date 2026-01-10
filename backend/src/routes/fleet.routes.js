@@ -10,6 +10,7 @@ import {
   listPendingDrivers,
   approveDriver,
   rejectDriver,
+  getDriverProfile,
 } from '../controllers/fleetController.js'
 
 export const fleetRouter = Router()
@@ -24,3 +25,4 @@ fleetRouter.get('/drivers', requireRole('MANAGER'), asyncHandler(listDrivers))
 fleetRouter.get('/drivers/pending', requireRole('MANAGER'), asyncHandler(listPendingDrivers))
 fleetRouter.post('/drivers/:id/approve', requireRole('MANAGER'), asyncHandler(approveDriver))
 fleetRouter.post('/drivers/:id/reject', requireRole('MANAGER'), asyncHandler(rejectDriver))
+fleetRouter.get('/drivers/:id', requireRole('MANAGER'), asyncHandler(getDriverProfile))

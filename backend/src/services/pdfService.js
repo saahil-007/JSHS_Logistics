@@ -89,39 +89,63 @@ export async function generateShipmentPdf({ shipment, type, actor, options = {} 
 }
 
 // ==========================================
-// 1. STANDARD DOCUMENT RENDERER (Legacy Support)
+// 1. STANDARD DOCUMENT RENDERER (Enhanced Responsiveness)
 // ==========================================
 function renderStandardDocument(doc, shipment, type) {
   const title = TYPE_TITLES[type] || type.replace(/_/g, ' ')
 
-  // Header Band
-  doc.rect(40, 40, doc.page.width - 80, 70).fill('#0f172a')
-  doc.fillColor('#e5e7eb').fontSize(10).font('Helvetica-Bold').text('JSHS LOGISTICS', 60, 52, { characterSpacing: 2 })
-  doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(title, 60, 72, { width: doc.page.width - 120 })
-  doc.fillColor('#9ca3af').fontSize(9).font('Helvetica').text('Journey Paperwork Automation • Generated ' + new Date().toLocaleString(), 60, 98)
+  // Header Band (Branded)
+  doc.rect(0, 0, doc.page.width, 120).fill('#0f172a')
+
+  // Center Logo Text
+  doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('JSHS LOGISTICS', 0, 45, {
+    align: 'center',
+    width: doc.page.width,
+    characterSpacing: 2
+  })
+  doc.fillColor('#3b82f6').fontSize(10).font('Helvetica-Bold').text('INTELLIGENT SUPPLY CHAIN NETWORK', 0, 75, {
+    align: 'center',
+    width: doc.page.width,
+    characterSpacing: 1
+  })
+
+  // Document Title Overlay
+  doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text(title, 40, 140)
+  doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('SECURE JOURNEY RECORD • ' + new Date().toLocaleString(), 40, 158)
+
+  doc.moveTo(40, 175).lineTo(doc.page.width - 40, 175).lineWidth(0.5).stroke('#e2e8f0')
 
   // Basic Shipment Summary
-  let y = 140
-  doc.fillColor('#111827').fontSize(12).font('Helvetica-Bold').text('Shipment Overview', 40, y)
-  y += 12
-  drawDivider(doc, y)
+  let y = 195
+  doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text('Core Meta-Data', 40, y)
   y += 20
 
   renderKeyValueGrid(doc, shipment, y);
 
   // Content Body
-  y += 100
-  doc.fillColor('#111827').fontSize(12).font('Helvetica-Bold').text('Document Details', 40, y)
-  y += 12
-  drawDivider(doc, y)
-  y += 18
+  y += 110
+  doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text('Verification & Compliance Logs', 40, y)
+  y += 15
+  doc.moveTo(40, y).lineTo(doc.page.width - 40, y).lineWidth(0.5).stroke('#f1f5f9')
+  y += 20
 
   const bullets = getSectionBullets(type, shipment)
-  doc.fontSize(9).font('Helvetica').fillColor('#374151')
+  doc.fontSize(9).font('Helvetica').fillColor('#334155')
+
   bullets.forEach((line) => {
-    doc.circle(46, y + 4, 1.5).fill('#6b7280').fillColor('#374151')
-    doc.text(line, 54, y, { width: doc.page.width - 100 })
-    y += 16
+    // Check if we need a new page
+    if (y > doc.page.height - 100) {
+      doc.addPage()
+      y = 50
+    }
+
+    doc.circle(46, y + 4, 2).fill('#3b82f6')
+    doc.fillColor('#334155')
+
+    // Use doc.text with width and capture the height it used to prevent overlapping
+    const textHeight = doc.heightOfString(line, { width: doc.page.width - 100 })
+    doc.text(line, 58, y, { width: doc.page.width - 100, lineGap: 2 })
+    y += textHeight + 12
   })
 
   drawFooter(doc);
@@ -142,30 +166,26 @@ function renderDetailedInvoice(doc, shipment, actor) {
   let y = 50;
 
   // -- LOGO & HEADER --
-  doc.fontSize(20).font('Helvetica-Bold').fillColor('#111827').text('JSHS Logistics', 40, y);
-  doc.fontSize(10).font('Helvetica').fillColor('#6b7280').text('India\'s Premier Logistics Network', 40, y + 25);
-  // Placeholder for Logo Image if we had one: doc.image('logo.png', 40, 40, { width: 50 })
+  doc.fillColor('#1e293b').fontSize(24).font('Helvetica-Bold').text('JSHS LOGISTICS', 0, 50, { align: 'center', width: doc.page.width });
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('#64748b').text('NATIONWIDE STRATEGIC FREIGHT OPERATIONS', 0, 80, { align: 'center', width: doc.page.width, characterSpacing: 1 });
 
+  y = 120;
   // -- INVOICE DETAILS BLOCK (Right Aligned) --
-  doc.fontSize(16).font('Helvetica-Bold').fillColor('#111827').text('FINAL INVOICE', 400, y, { align: 'right' });
-  doc.fontSize(10).font('Helvetica').fillColor('#374151');
-  doc.text(`Invoice No: INV-${shipment.referenceId}`, 400, y + 25, { align: 'right' });
-  doc.text(`Date: ${invDate}`, 400, y + 38, { align: 'right' });
-  doc.text(`Due Date: ${dueDate}`, 400, y + 51, { align: 'right' });
+  doc.rect(doc.page.width - 240, y, 200, 100).fill('#f8fafc');
+  doc.fillColor('#0f172a').fontSize(14).font('Helvetica-Bold').text('FINAL TAX INVOICE', doc.page.width - 230, y + 15);
+  doc.fontSize(9).font('Helvetica').fillColor('#475569');
+  doc.text(`Invoice: INV-${shipment.referenceId}`, doc.page.width - 230, y + 40);
+  doc.text(`Date: ${invDate}`, doc.page.width - 230, y + 54);
+  doc.text(`Due Date: ${dueDate}`, doc.page.width - 230, y + 68);
 
-  y += 80;
-  drawDivider(doc, y);
-  y += 20;
-
-  // -- CUSTOMER INFO --
-  doc.fontSize(12).font('Helvetica-Bold').fillColor('#111827').text('Customer Information', 40, y);
-  y += 15;
-  doc.fontSize(10).font('Helvetica').fillColor('#374151');
-  doc.text(`Name: ${customer.legalName || customer.name || 'Valued Customer'}`, 40, y);
-  doc.text(`Address: ${customer.address || 'Not Provided'}`, 40, y + 15);
-  doc.text(`Contact: ${customer.phone || '-'}`, 40, y + 30);
-  doc.text(`Email: ${customer.email}`, 40, y + 45);
-  doc.text(`GST / Tax ID: ${customer.gstNumber || 'Unregistered'}`, 40, y + 60);
+  // -- CUSTOMER INFO (Left Aligned) --
+  doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text('BILL TO:', 40, y);
+  y += 18;
+  doc.fontSize(10).font('Helvetica').fillColor('#334155');
+  doc.text(customer.legalName || customer.name || 'Valued Customer', 40, y, { width: 250 });
+  doc.fontSize(9).text(customer.address || 'Address Not Provided', 40, doc.y + 2, { width: 250 });
+  doc.text(`GST: ${customer.gstNumber || 'Unregistered'}`, 40, doc.y + 5);
+  doc.text(`Email: ${customer.email}`, 40, doc.y + 2);
 
   y += 90;
   drawDivider(doc, y);
