@@ -217,13 +217,17 @@ export default function Register() {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300 ml-1">Mobile Number</label>
                 <div className="relative group">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-cyan-500" />                  <motion.input
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-cyan-500" />
+                  <motion.input
                     whileFocus={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.8)" }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10)
+                      setPhone(val)
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-white/50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-800/50 dark:text-white"
-                    placeholder="+91 98765 43210"
+                    placeholder="9876543210"
                   />
                 </div>
               </div>
