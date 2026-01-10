@@ -24,15 +24,23 @@ export default function PredictiveTimeline({ shipment, events }: PredictiveTimel
 
     // Get the most relevant event for a status
     const getEvent = (status: string) => {
-        return events?.find(e => {
+        const index = BASE_STEPS.findIndex(s => s.id === status);
+        const isDone = index < currentStepIndex;
+
+        const event = events?.find(e => {
             if (status === 'CREATED') return e.type === 'SHIPMENT_CREATED';
             if (status === 'ASSIGNED') return e.type === 'SHIPMENT_ASSIGNED';
-            if (status === 'PICKED_UP') return e.type === 'SHIPMENT_PICKED_UP' || e.type === 'MARK_LOADED'; // 'MARK_LOADED' also implies picked up
+            if (status === 'PICKED_UP') return e.type === 'SHIPMENT_PICKED_UP' || e.type === 'MARK_LOADED';
             if (status === 'IN_TRANSIT') return e.type === 'SHIPMENT_DISPATCHED' || e.type === 'SHIPMENT_IN_TRANSIT';
             if (status === 'OUT_FOR_DELIVERY') return e.type === 'SHIPMENT_OUT_FOR_DELIVERY';
             if (status === 'DELIVERED') return e.type === 'SHIPMENT_DELIVERED';
             return false;
         });
+
+        if (event) return event;
+        // Fallback: if step is conceptually done but no exact event log found
+        if (isDone) return { createdAt: shipment.updatedAt || shipment.createdAt } as any;
+        return null;
     };
 
     return (

@@ -9,93 +9,102 @@ export function getNotificationTemplate(eventType, shipment, role = 'CUSTOMER') 
     const templates = {
         // Standard Lifecycle
         SHIPMENT_CREATED: {
-            default: { message: `Shipment ${ref} has been created.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your order ${ref} has been placed successfully.`, severity: 'SUCCESS' },
-            MANAGER: { message: `New shipment ${ref} created.`, severity: 'INFO' }
+            default: { title: 'Order Placed', message: `Shipment ${ref} has been created.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Order Placed', message: `Your order ${ref} has been placed successfully.`, severity: 'SUCCESS' },
+            MANAGER: { title: 'New Shipment', message: `New shipment ${ref} created.`, severity: 'INFO' }
         },
         SHIPMENT_ASSIGNED: {
-            default: { message: `Shipment ${ref} has been assigned.`, severity: 'INFO' },
-            DRIVER: { message: `You have been assigned to shipment ${ref}. Please start pickup.`, severity: 'INFO' },
-            MANAGER: { message: `Driver assigned to shipment ${ref}.`, severity: 'SUCCESS' }
+            default: { title: 'Driver Assigned', message: `Shipment ${ref} has been assigned.`, severity: 'INFO' },
+            DRIVER: { title: 'New Assignment', message: `You have been assigned to shipment ${ref}. Please start pickup.`, severity: 'INFO' },
+            MANAGER: { title: 'Driver Assigned', message: `Driver assigned to shipment ${ref}.`, severity: 'SUCCESS' }
         },
         SHIPMENT_PICKED_UP: {
-            default: { message: `Shipment ${ref} has been picked up.`, severity: 'INFO' },
-            CUSTOMER: { message: `Driver has picked up your shipment ${ref}.`, severity: 'INFO' }
+            default: { title: 'Picked Up', message: `Shipment ${ref} has been picked up.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Picked Up', message: `Driver has picked up your shipment ${ref}.`, severity: 'INFO' }
         },
         SHIPMENT_DISPATCHED: {
-            default: { message: `Shipment ${ref} is now in transit.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} is on its way!`, severity: 'SUCCESS' }
+            default: { title: 'In Transit', message: `Shipment ${ref} is now in transit.`, severity: 'INFO' },
+            CUSTOMER: { title: 'In Transit', message: `Your shipment ${ref} is on its way!`, severity: 'SUCCESS' }
         },
         SHIPMENT_OUT_FOR_DELIVERY: {
-            default: { message: `Shipment ${ref} is out for delivery.`, severity: 'INFO' },
-            CUSTOMER: { message: `Get ready! Your shipment ${ref} is out for delivery today.`, severity: 'SUCCESS' }
+            default: { title: 'Out For Delivery', message: `Shipment ${ref} is out for delivery.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Out For Delivery', message: `Get ready! Your shipment ${ref} is out for delivery today.`, severity: 'SUCCESS' }
         },
         SHIPMENT_DELIVERED: {
-            default: { message: `Shipment ${ref} has been delivered.`, severity: 'SUCCESS' },
-            CUSTOMER: { message: `Shipment ${ref} delivered. Thanks for choosing us!`, severity: 'SUCCESS' },
-            DRIVER: { message: `Delivery for ${ref} confirmed. Good job!`, severity: 'SUCCESS' }
+            default: { title: 'Delivered', message: `Shipment ${ref} has been delivered.`, severity: 'SUCCESS' },
+            CUSTOMER: { title: 'Delivered', message: `Shipment ${ref} delivered. Thanks for choosing us!`, severity: 'SUCCESS' },
+            DRIVER: { title: 'Delivery Confirmed', message: `Delivery for ${ref} confirmed. Good job!`, severity: 'SUCCESS' }
         },
 
         // Exceptions & Alerts
         SHIPMENT_DELAYED: {
-            default: { message: `Shipment ${ref} is delayed.`, severity: 'WARNING' },
-            CUSTOMER: { message: `Sorry, shipment ${ref} is slightly delayed. We're on it.`, severity: 'WARNING' },
-            MANAGER: { message: `Delay alert for ${ref}. Check traffic updates.`, severity: 'ERROR' }
+            default: { title: 'Delay Alert', message: `Shipment ${ref} is delayed.`, severity: 'WARNING', importance: 'HIGH' },
+            CUSTOMER: { title: 'Delay Notice', message: `Sorry, shipment ${ref} is slightly delayed. We're on it.`, severity: 'WARNING', importance: 'HIGH' },
+            MANAGER: { title: 'Critical Delay', message: `Delay alert for ${ref}. Check traffic updates.`, severity: 'ERROR', importance: 'HIGH' }
         },
         PREDICTED_DELAY: {
-            default: { message: `Potential delay detected for ${ref}.`, severity: 'WARNING' },
-            MANAGER: { message: `AI Prediction: High risk of delay for ${ref}.`, severity: 'WARNING' }
+            default: { title: 'Prediction: Delay', message: `Potential delay detected for ${ref}.`, severity: 'WARNING', importance: 'HIGH' },
+            MANAGER: { title: 'Intelligence Alert', message: `AI Prediction: High risk of delay for ${ref}.`, severity: 'WARNING', importance: 'HIGH' }
         },
         MAINTENANCE: {
-            default: { message: `Maintenance alert for vehicle attached to ${ref}.`, severity: 'ERROR' }
+            default: { title: 'Maintenance Required', message: `Maintenance alert for vehicle attached to ${ref}.`, severity: 'ERROR', importance: 'HIGH' }
         },
         GEOFENCE_EXIT: {
-            default: { message: `Shipment ${ref} has left the designated zone.`, severity: 'WARNING' }
+            default: { title: 'Geofence Breach', message: `Shipment ${ref} has left the designated zone.`, severity: 'WARNING', importance: 'HIGH' }
         },
         // Progress Milestones
         SHIPMENT_25_PERCENT: {
-            default: { message: `Shipment ${ref} has reached 25% of its journey.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} is 25% complete.`, severity: 'INFO' },
-            DRIVER: { message: `Shipment ${ref} is 25% done. Keep going!`, severity: 'INFO' },
-            MANAGER: { message: `Shipment ${ref} progress at 25%.`, severity: 'INFO' }
+            default: { title: '25% Milestone', message: `Shipment ${ref} has reached 25% of its journey.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Journey Progress', message: `Your shipment ${ref} is 25% complete.`, severity: 'INFO' },
+            DRIVER: { title: 'Milestone Reached', message: `Shipment ${ref} is 25% done. Keep going!`, severity: 'INFO' },
+            MANAGER: { title: 'Progress Update', message: `Shipment ${ref} progress at 25%.`, severity: 'INFO' }
         },
         SHIPMENT_50_PERCENT: {
-            default: { message: `Shipment ${ref} is halfway through its route.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} is 50% complete.`, severity: 'INFO' },
-            DRIVER: { message: `Halfway there for shipment ${ref}.`, severity: 'INFO' },
-            MANAGER: { message: `Shipment ${ref} progress at 50%.`, severity: 'INFO' }
+            default: { title: '50% Milestone', message: `Shipment ${ref} is halfway through its route.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Journey Progress', message: `Your shipment ${ref} is 50% complete.`, severity: 'INFO' },
+            DRIVER: { title: 'Milestone Reached', message: `Halfway there for shipment ${ref}.`, severity: 'INFO' },
+            MANAGER: { title: 'Progress Update', message: `Shipment ${ref} progress at 50%.`, severity: 'INFO' }
         },
         SHIPMENT_75_PERCENT: {
-            default: { message: `Shipment ${ref} has covered 75% of its route.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} is 75% complete.`, severity: 'INFO' },
-            DRIVER: { message: `Almost done! 75% of shipment ${ref} completed.`, severity: 'INFO' },
-            MANAGER: { message: `Shipment ${ref} progress at 75%.`, severity: 'INFO' }
+            default: { title: '75% Milestone', message: `Shipment ${ref} has covered 75% of its route.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Journey Progress', message: `Your shipment ${ref} is 75% complete.`, severity: 'INFO' },
+            DRIVER: { title: 'Milestone Reached', message: `Almost done! 75% of shipment ${ref} completed.`, severity: 'INFO' },
+            MANAGER: { title: 'Progress Update', message: `Shipment ${ref} progress at 75%.`, severity: 'INFO' }
         },
         ARRIVAL_SOON: {
-            default: { message: `Shipment ${ref} is arriving soon.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} will arrive shortly.`, severity: 'SUCCESS' },
-            DRIVER: { message: `Prepare for delivery of ${ref}.`, severity: 'INFO' },
-            MANAGER: { message: `Shipment ${ref} nearing destination.`, severity: 'INFO' }
+            default: { title: 'Arriving Soon', message: `Shipment ${ref} is arriving soon.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Arriving Soon', message: `Your shipment ${ref} will arrive shortly.`, severity: 'SUCCESS' },
+            DRIVER: { title: 'Arrival Pending', message: `Prepare for delivery of ${ref}.`, severity: 'INFO' },
+            MANAGER: { title: 'Arrival Notice', message: `Shipment ${ref} nearing destination.`, severity: 'INFO' }
         },
         LOCATION_UPDATE: {
-            default: { message: `Shipment ${ref} location updated.`, severity: 'INFO' },
-            CUSTOMER: { message: `Your shipment ${ref} location has been updated.`, severity: 'INFO' },
-            DRIVER: { message: `Location ping received for ${ref}.`, severity: 'INFO' },
-            MANAGER: { message: `Shipment ${ref} location change logged.`, severity: 'INFO' }
+            default: { title: 'Location Ping', message: `Shipment ${ref} location updated.`, severity: 'INFO' },
+            CUSTOMER: { title: 'Location Update', message: `Your shipment ${ref} location has been updated.`, severity: 'INFO' },
+            DRIVER: { title: 'Tracking Ping', message: `Location ping received for ${ref}.`, severity: 'INFO' },
+            MANAGER: { title: 'Tracking Update', message: `Shipment ${ref} location change logged.`, severity: 'INFO' }
         },
         IOT_ALERT_FUEL: {
-            default: { message: `Low fuel alert detected.`, severity: 'WARNING' },
-            MANAGER: { message: `CRITICAL: Low fuel detected for vehicle attached to ${ref}.`, severity: 'WARNING' },
-            DRIVER: { message: `ATTENTION: Fuel levels are low. Please refill soon.`, severity: 'WARNING' }
+            default: { title: 'Fuel Alert', message: `Low fuel alert detected.`, severity: 'WARNING', importance: 'HIGH' },
+            MANAGER: { title: 'Critical Fuel', message: `CRITICAL: Low fuel detected for vehicle attached to ${ref}.`, severity: 'WARNING', importance: 'HIGH' },
+            DRIVER: { title: 'Fuel Warning', message: `ATTENTION: Fuel levels are low. Please refill soon.`, severity: 'WARNING', importance: 'HIGH' }
         },
         IOT_ALERT_TEMP: {
-            default: { message: `Temperature breach alert.`, severity: 'ERROR' },
-            MANAGER: { message: `CRITICAL: Temperature breach for vehicle attached to ${ref}.`, severity: 'ERROR' },
-            DRIVER: { message: `ALERT: Chiller temperature is out of range! Check system immediately.`, severity: 'ERROR' }
+            default: { title: 'Temperature Alert', message: `Temperature breach alert.`, severity: 'ERROR', importance: 'HIGH' },
+            MANAGER: { title: 'Critical Temp', message: `CRITICAL: Temperature breach for vehicle attached to ${ref}.`, severity: 'ERROR', importance: 'HIGH' },
+            DRIVER: { title: 'Temp Warning', message: `ALERT: Chiller temperature is out of range! Check system immediately.`, severity: 'ERROR', importance: 'HIGH' }
         },
+        DRIVER_ONBOARDED: {
+            MANAGER: { title: 'New Driver', message: `New driver registered and pending approval.`, severity: 'INFO', importance: 'HIGH' }
+        }
     };
 
     const eventTemplates = templates[eventType] || {};
-    // Return role-specific message if exists, else default, else generic fallback
-    return eventTemplates[role] || eventTemplates.default || { message: `${eventType}: Shipment ${ref}`, severity: 'INFO' };
+    const result = eventTemplates[role] || eventTemplates.default || { title: eventType.replace(/_/g, ' '), message: `${eventType}: Shipment ${ref}`, severity: 'INFO' };
+
+    // Auto-determine importance if not explicitly set
+    if (!result.importance) {
+        result.importance = (result.severity === 'ERROR' || result.severity === 'WARNING') ? 'HIGH' : 'LOW';
+    }
+
+    return result;
 }

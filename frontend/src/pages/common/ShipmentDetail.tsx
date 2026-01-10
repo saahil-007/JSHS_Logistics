@@ -20,6 +20,7 @@ import { FileText, CheckCircle2, Zap, Navigation, BarChart3, MapPin, Settings, R
 import { toast } from 'react-hot-toast'
 import Modal from '../../components/Modal'
 import ReviewModal from '../../components/ReviewModal'
+import { User as UserIcon, Phone, Mail, Building } from 'lucide-react'
 
 type Driver = { _id: string; name: string; email: string; role: string }
 type Vehicle = { _id: string; plateNumber: string; model?: string; status: string }
@@ -537,7 +538,6 @@ export default function ShipmentDetail() {
             </div>
           )}
 
-          {/* Driver Specific Actions */}
           {user?.role === 'DRIVER' && String(shipment.assignedDriverId) === String(user.id) && (
             <div className="flex gap-2">
               {shipment.status === 'ASSIGNED' && (
@@ -638,6 +638,63 @@ export default function ShipmentDetail() {
 
         {/* Right Column: Journey Paperwork Center & Driver Info */}
         <div className="space-y-6">
+          {/* Customer & Consignor Information (Manager View) */}
+          {isManagerPortal && (
+            <div className="glass-card bg-white dark:bg-slate-900 border-none p-6 shadow-xl space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <UserIcon className="h-4 w-4 text-indigo-600" />
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-[0.1em]">Commercial Stakeholders</h3>
+              </div>
+
+              {/* Customer/Consignor (Payer) */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Consignor / Payer</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600">Client</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-3 w-3 text-slate-400" />
+                    <span className="text-sm font-bold">{(shipment.customerId as any)?.legalName || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-3 w-3 text-slate-400" />
+                    <span className="text-xs font-medium">{(shipment.customerId as any)?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-4 pt-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                      <Mail className="h-3 w-3" />
+                      {(shipment.customerId as any)?.email || 'N/A'}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                      <Phone className="h-3 w-3" />
+                      {(shipment.customerId as any)?.phone || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Consignee */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Consignee / Receiver</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">Recipient</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-3 w-3 text-slate-400" />
+                    <span className="text-sm font-bold">{shipment.consignee?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3 w-3 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-500">{shipment.consignee?.contact || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Driver Trust Profile (Customer/Manager View) */}
           {(user?.role === 'CUSTOMER' || isManagerPortal) && shipment.assignedDriverId && typeof shipment.assignedDriverId === 'object' && (
             <div className="glass-card bg-slate-900 text-white border-none p-6 shadow-2xl relative overflow-hidden group">

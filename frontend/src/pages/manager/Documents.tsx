@@ -4,9 +4,6 @@ import {
     Search,
     Filter,
     Eye,
-    RefreshCw,
-    AlertTriangle,
-    Shield,
     Plus,
     Trash2,
     Zap,
@@ -18,7 +15,13 @@ import {
     Users,
     ChevronLeft,
     ChevronRight,
-    Calendar
+    Calendar,
+    LayoutGrid,
+    Shield,
+    RefreshCw,
+    X,
+    FileCheck,
+    Download
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../auth/AuthContext'
@@ -66,18 +69,19 @@ interface PaginationData {
 }
 
 const ALL_CATEGORIES = [
-    { id: 'all', label: 'All Documents', icon: FileText, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
-    { id: 'universal', label: 'Universal', icon: FileText, roles: ['MANAGER', 'CUSTOMER'] },
-    { id: 'sea', label: 'Sea Freight', icon: Anchor, roles: ['MANAGER', 'CUSTOMER'] },
-    { id: 'air', label: 'Air Freight', icon: Plane, roles: ['MANAGER', 'CUSTOMER'] },
-    { id: 'road', label: 'Road Freight', icon: Truck, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
-    { id: 'customs', label: 'Customs', icon: Globe, roles: ['MANAGER', 'CUSTOMER'] },
-    { id: 'consignor-wise', label: 'Consignor Wise', icon: Users, roles: ['MANAGER'] },
-    { id: 'customer-wise', label: 'Customer-wise', icon: Users, roles: ['MANAGER'] },
-    { id: 'shipment', label: 'Shipment-wise', icon: Zap, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
-    { id: 'driver', label: 'Driver-wise', icon: Shield, roles: ['MANAGER', 'DRIVER'] },
-    { id: 'vehicle', label: 'Vehicle-wise', icon: RefreshCw, roles: ['MANAGER', 'DRIVER'] },
+    { id: 'all', label: 'Master Archive', icon: FileText, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'], color: 'slate' },
+    { id: 'universal', label: 'Commercial & Legal', icon: Globe, roles: ['MANAGER', 'CUSTOMER'], color: 'blue' },
+    { id: 'road', label: 'Inland Transport', icon: Truck, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'], color: 'emerald' },
+    { id: 'sea', label: 'Maritime/Sea', icon: Anchor, roles: ['MANAGER', 'CUSTOMER'], color: 'indigo' },
+    { id: 'air', label: 'Aviation/Air', icon: Plane, roles: ['MANAGER', 'CUSTOMER'], color: 'sky' },
+    { id: 'customs', label: 'Cross-Border/Customs', icon: Security, roles: ['MANAGER', 'CUSTOMER'], color: 'violet' },
+    { id: 'consignor-wise', label: 'Partner Management', icon: Users, roles: ['MANAGER'], color: 'amber' },
+    { id: 'shipment', label: 'Journey Sequence', icon: Zap, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'], color: 'rose' },
+    { id: 'driver', label: 'Personnel Records', icon: Shield, roles: ['MANAGER', 'DRIVER'], color: 'cyan' },
+    { id: 'vehicle', label: 'Fleet Compliance', icon: RefreshCw, roles: ['MANAGER', 'DRIVER'], color: 'purple' },
 ]
+
+function Security(props: any) { return <Shield {...props} /> } // Helper for custom icon name
 
 export default function Documents() {
     const { user } = useAuth()
@@ -102,14 +106,15 @@ export default function Documents() {
     }, [category])
 
     const { data, isLoading } = useQuery({
-        queryKey: ['docs', apiCategory, page, searchTerm],
+        queryKey: ['docs', apiCategory, page, searchTerm, filterType],
         queryFn: async () => {
             const res = await api.get('/docs', {
                 params: {
                     category: apiCategory === 'ALL' ? undefined : apiCategory,
                     page,
-                    limit: 12, // Grid friendly limit
-                    search: searchTerm || undefined
+                    limit: 12,
+                    search: searchTerm || undefined,
+                    type: filterType === 'ALL' ? undefined : filterType
                 }
             })
             return res.data as { documents: Document[], pagination: PaginationData }
@@ -121,15 +126,15 @@ export default function Documents() {
         mutationFn: (id: string) => api.delete(`/docs/${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['docs'] })
-            toast.success('Document removed')
+            toast.success('Document removed from vault')
         }
     })
 
-    const docTypes = useMemo(() => [
+    const docTypes = [
         'ALL', 'COMMERCIAL_INVOICE', 'PACKING_LIST', 'CERTIFICATE_OF_ORIGIN', 'BILL_OF_LADING', 'TELEX_RELEASE',
         'SEA_WAYBILL', 'AIR_WAYBILL', 'CMR_ROAD_CONSIGNMENT_NOTE', 'TRIP_SHEET', 'SHIPPING_BILL',
-        'BILL_OF_ENTRY', 'POD', 'GST_INVOICE'
-    ], [])
+        'BILL_OF_ENTRY', 'POD', 'GST_INVOICE', 'DISPATCH_MANIFEST', 'VEHICLE_INSPECTION'
+    ]
 
     const visibleCategories = useMemo(() => {
         return ALL_CATEGORIES.filter(cat => cat.roles.includes(user?.role || ''))
@@ -139,10 +144,36 @@ export default function Documents() {
     const groupedDocs = useMemo(() => {
         if (!data?.documents) return {}
 
-        if (category === 'consignor-wise') {
-            // Group by Customer Name
+        if (category === 'consignor-wise' || category === 'customer-wise') {
             return data.documents.reduce((acc, doc) => {
-                const key = doc.customerId?.name || 'Unknown Consignor'
+                const key = doc.customerId?.name || 'External Partner'
+                if (!acc[key]) acc[key] = []
+                acc[key].push(doc)
+                return acc
+            }, {} as Record<string, Document[]>)
+        }
+
+        if (category === 'shipment') {
+            return data.documents.reduce((acc, doc) => {
+                const key = doc.shipmentId?.referenceId || 'General Records'
+                if (!acc[key]) acc[key] = []
+                acc[key].push(doc)
+                return acc
+            }, {} as Record<string, Document[]>)
+        }
+
+        if (category === 'driver') {
+            return data.documents.reduce((acc, doc) => {
+                const key = doc.driverId?.name || 'System/Unassigned'
+                if (!acc[key]) acc[key] = []
+                acc[key].push(doc)
+                return acc
+            }, {} as Record<string, Document[]>)
+        }
+
+        if (category === 'vehicle') {
+            return data.documents.reduce((acc, doc) => {
+                const key = doc.vehicleId?.plateNumber || 'Fleet Inventory'
                 if (!acc[key]) acc[key] = []
                 acc[key].push(doc)
                 return acc
@@ -151,14 +182,13 @@ export default function Documents() {
 
         // Default Date-wise grouping
         return data.documents.reduce((acc, doc) => {
-            const date = new Date(doc.createdAt)
-            const today = new Date()
-            const isToday = date.toDateString() === today.toDateString()
-            const isYesterday = new Date(today.setDate(today.getDate() - 1)).toDateString() === date.toDateString()
+            const dateStr = new Date(doc.createdAt).toDateString()
+            const todayStr = new Date().toDateString()
+            const yesterdayStr = new Date(Date.now() - 86400000).toDateString()
 
             let key = formatDate(doc.createdAt)
-            if (isToday) key = 'Today'
-            if (isYesterday) key = 'Yesterday'
+            if (dateStr === todayStr) key = 'Today'
+            else if (dateStr === yesterdayStr) key = 'Yesterday'
 
             if (!acc[key]) acc[key] = []
             acc[key].push(doc)
@@ -170,231 +200,234 @@ export default function Documents() {
 
     return (
         <div className="space-y-8 pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500 text-white uppercase tracking-widest">
-                            {user.role === 'MANAGER' ? 'Global Logistics Compliance' : 'Secure Paperwork Center'}
-                        </span>
+            {/* Context Intelligence Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 py-6">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <div className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-white/10">
+                            Regulatory Vault
+                        </div>
                         {category && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-200 text-slate-600 uppercase tracking-widest">
-                                / {visibleCategories.find(c => c.id === category)?.label}
-                            </span>
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <ArrowRight className="h-3 w-3" />
+                                <span className="text-[10px] font-black dark:text-blue-400 uppercase tracking-widest">
+                                    {visibleCategories.find(c => c.id === category)?.label}
+                                </span>
+                            </div>
                         )}
                     </div>
                     <div className="flex items-center gap-4">
                         {category && (
                             <button
                                 onClick={() => navigate('/app/documents')}
-                                className="p-2 bg-slate-100 dark:bg-white/5 rounded-xl hover:bg-slate-200 transition-colors"
+                                className="h-12 w-12 flex items-center justify-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 hover:scale-105 transition-transform shadow-sm"
                             >
-                                <ArrowRight className="h-4 w-4 text-slate-600 rotate-180" />
+                                <ChevronLeft className="h-6 w-6 text-slate-600" />
                             </button>
                         )}
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-                            {category ? visibleCategories.find(c => c.id === category)?.label : 'Paperwork Control'}
+                            {category ? visibleCategories.find(c => c.id === category)?.label : 'Compliance Archive'}
                         </h1>
                     </div>
-                    <p className="text-slate-500 text-sm font-medium mt-1">
-                        {category ? `Managing ${category.replace('-', ' ')} documents & records` : 'Select a category to manage specific document types'}
-                    </p>
                 </div>
-                {category && user.role === 'MANAGER' && (
-                    <div className="flex gap-3">
+
+                <div className="flex items-center gap-3">
+                    {category && user.role === 'MANAGER' && (
                         <button
                             onClick={() => setIsIssueModalOpen(true)}
-                            className="btn-primary flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20"
                         >
                             <Plus className="h-4 w-4" />
-                            New Record
+                            Issue Record
                         </button>
+                    )}
+                    <div className="h-12 w-12 flex items-center justify-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 text-slate-400">
+                        <LayoutGrid className="h-5 w-5" />
                     </div>
-                )}
+                </div>
             </div>
 
             <AnimatePresence mode="wait">
                 {!category ? (
-                    // DASHBOARD VIEW
+                    // HIGH-END DASHBOARD CATEGORY SELECTOR
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="space-y-10"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
                     >
-                        {/* Master Document Type Selector (Quick Search) */}
-                        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden relative group">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <FileText size={100} />
-                            </div>
-                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                                <div className="max-w-md">
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Paperwork Vault Search</h3>
-                                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                        Select a specific document type to access records in the secure vault.
-                                    </p>
+                        {visibleCategories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => navigate(`/app/documents/${cat.id}`)}
+                                className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-blue-500/30 transition-all text-left flex flex-col justify-between h-[280px]"
+                            >
+                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity grayscale">
+                                    <cat.icon size={140} />
                                 </div>
-                                <div className="flex-1 max-w-sm">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Document Type Selector</label>
-                                        <div className="relative">
-                                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500" />
-                                            <select
-                                                onChange={(e) => {
-                                                    if (e.target.value !== 'ALL') {
-                                                        navigate(`/app/documents/all?type=${e.target.value}`) // URL params query handling could be improved, but navigating to 'all' is safe
-                                                    }
-                                                }}
-                                                className="input-glass w-full py-4 pl-12 pr-10 text-sm font-bold appearance-none cursor-pointer"
-                                            >
-                                                <option value="ALL">Master Index (Select Type...)</option>
-                                                {docTypes.filter(t => t !== 'ALL').map(t => (
-                                                    <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                <ArrowRight className="h-4 w-4 text-slate-300" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {visibleCategories.filter(c => c.id !== 'all').map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => navigate(`/app/documents/${cat.id}`)}
-                                    className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-2xl hover:border-blue-500/30 transition-all text-left"
-                                >
-                                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                        <cat.icon size={120} />
-                                    </div>
-                                    <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg bg-blue-600 text-white group-hover:scale-110 transition-transform`}>
+                                <div className="space-y-6 relative z-10">
+                                    <div className={`h-16 w-16 rounded-[1.5rem] flex items-center justify-center shadow-lg bg-slate-100 dark:bg-white/5 group-hover:bg-blue-600 group-hover:text-white group-hover:scale-110 transition-all duration-500`}>
                                         <cat.icon className="h-8 w-8" />
                                     </div>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{cat.label}</h3>
-                                    <p className="text-slate-500 text-sm font-medium max-w-[240px]">
-                                        Access specialized documents for {cat.id.replace('-', ' ')} lifecycle.
-                                    </p>
-                                    <div className="mt-6 flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest">
-                                        Open Vault
-                                        <Plus className="h-3 w-3 rotate-45" />
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{cat.label}</h3>
+                                        <p className="text-slate-500 text-xs font-medium mt-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                            Managed access to technical records, legal manifests, and operational sequence for {cat.id.replace('-', ' ')}.
+                                        </p>
                                     </div>
-                                </button>
-                            ))}
-                        </div>
+                                </div>
+                                <div className="relative z-10 flex items-center justify-between pt-6 border-t border-slate-100 dark:border-white/5">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Open Archive</span>
+                                    <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                                </div>
+                            </button>
+                        ))}
                     </motion.div>
                 ) : (
-                    // LIST / GROUPED VIEW
+                    // PREMIUM LIST/GRID VIEW
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="space-y-6"
+                        className="space-y-10"
                     >
-                        {/* Filters & Mode Switcher */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm sticky top-4 z-20 backdrop-blur-md bg-white/80">
+                        {/* Advanced Filters */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 bg-white/70 dark:bg-slate-900/70 p-4 rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl backdrop-blur-2xl sticky top-6 z-30 transition-all">
                             <div className="relative md:col-span-2">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search documents by Name, Ref ID..."
+                                    placeholder="Search by ID, Name, or Metadata..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="input-glass pl-10 w-full"
+                                    className="w-full bg-slate-100 dark:bg-white/5 border-none rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-2 ring-blue-500 transition-all"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+                            <div className="relative">
+                                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                                 <select
                                     value={filterType}
                                     onChange={(e) => setFilterType(e.target.value)}
-                                    className="input-glass w-full"
+                                    className="w-full bg-slate-100 dark:bg-white/5 border-none rounded-2xl py-4 pl-12 pr-6 text-sm font-bold appearance-none cursor-pointer focus:ring-2 ring-blue-500 transition-all"
                                 >
-                                    <option value="ALL">Filter Type (All)</option>
-                                    {docTypes.map(t => (
+                                    <option value="ALL">All Types</option>
+                                    {docTypes.filter(t => t !== 'ALL').map(t => (
                                         <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
                                     ))}
                                 </select>
                             </div>
+                            <button className="h-14 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-center gap-3 hover:bg-slate-200 transition-colors">
+                                <FileCheck className="h-4 w-4 text-blue-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Verified Only</span>
+                            </button>
                             <button
                                 onClick={() => navigate('/app/documents')}
-                                className="btn-ghost flex items-center justify-center gap-2 text-xs font-bold"
+                                className="h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-slate-900/20"
                             >
-                                <ArrowRight className="h-3 w-3 rotate-180" />
-                                Back to Categories
+                                <X className="h-4 w-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Close Vault</span>
                             </button>
                         </div>
 
-                        {/* Content Area */}
                         {isLoading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-2xl" />)}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-10">
+                                {[...Array(6)].map((_, i) => <div key={i} className="h-64 bg-slate-50 dark:bg-white/5 rounded-[2.5rem] animate-pulse" />)}
                             </div>
                         ) : (
-                            <div className="space-y-8">
-                                {/* Grouped Display */}
+                            <div className="space-y-16">
                                 {Object.keys(groupedDocs).length > 0 ? (
                                     Object.entries(groupedDocs).map(([groupKey, groupDocs]) => (
-                                        <div key={groupKey} className="space-y-4">
-                                            <div className="flex items-center gap-3">
-                                                {category === 'consignor-wise' ? (
-                                                    <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                                        <Users className="h-4 w-4" />
+                                        <div key={groupKey} className="space-y-8">
+                                            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-10 w-10 text-xl font-black bg-blue-600 text-white flex items-center justify-center rounded-xl shadow-lg shadow-blue-500/20">
+                                                        {groupKey.charAt(0)}
                                                     </div>
-                                                ) : (
-                                                    <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                                                        <Calendar className="h-4 w-4" />
+                                                    <div>
+                                                        <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{groupKey}</h3>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{groupDocs.length} Total Records Found</p>
                                                     </div>
-                                                )}
-                                                <h3 className="text-lg font-black text-slate-700 dark:text-slate-200">{groupKey}</h3>
-                                                <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{groupDocs.length}</span>
+                                                </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
                                                 {groupDocs
                                                     .filter(d => filterType === 'ALL' || d.type === filterType)
                                                     .map((doc) => (
                                                         <motion.div
                                                             key={doc._id}
                                                             layout
-                                                            initial={{ opacity: 0, scale: 0.95 }}
+                                                            initial={{ opacity: 0, scale: 0.9 }}
                                                             animate={{ opacity: 1, scale: 1 }}
-                                                            className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 p-6 shadow-sm hover:shadow-xl transition-all relative flex flex-col justify-between"
+                                                            className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 p-8 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all relative overflow-hidden"
                                                         >
-                                                            <div>
-                                                                <div className="flex items-start justify-between mb-4">
-                                                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 dark:bg-blue-900/20`}>
-                                                                        <FileText className="h-6 w-6" />
+                                                            {/* Status Decor */}
+                                                            <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl opacity-20 ${doc.verified ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+
+                                                            <div className="relative z-10 flex flex-col h-full justify-between">
+                                                                <div>
+                                                                    <div className="flex items-start justify-between mb-8">
+                                                                        <div className="h-14 w-14 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-inner">
+                                                                            <FileText className="h-8 w-8" />
+                                                                        </div>
+                                                                        <div className="flex flex-col items-end gap-2">
+                                                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-500 border border-slate-200 dark:border-white/10">
+                                                                                {doc.type.replace(/_/g, ' ')}
+                                                                            </span>
+                                                                            {doc.verified ? (
+                                                                                <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase tracking-widest">
+                                                                                    <FileCheck className="h-3 w-3" /> Legitimacy Verified
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="flex items-center gap-1 text-[8px] font-black text-blue-500 uppercase tracking-widest animate-pulse">
+                                                                                    Pending Review
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                    <span className="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-600">
-                                                                        {doc.type.replace(/_/g, ' ')}
-                                                                    </span>
+
+                                                                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 line-clamp-2 leading-tight" title={doc.fileName}>
+                                                                        {doc.fileName || 'Untitled Documentation'}
+                                                                    </h3>
+
+                                                                    <div className="space-y-2 mt-auto">
+                                                                        {doc.shipmentId && (
+                                                                            <div className="flex items-center justify-between text-[10px]">
+                                                                                <span className="font-black text-slate-400 uppercase">Sequence ID</span>
+                                                                                <span className="font-black text-blue-600">{doc.shipmentId.referenceId}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {doc.customerId && (
+                                                                            <div className="flex items-center justify-between text-[10px]">
+                                                                                <span className="font-black text-slate-400 uppercase">Entity</span>
+                                                                                <span className="font-black text-slate-900 dark:text-white truncate max-w-[120px]">{doc.customerId.name}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <h3 className="font-black text-slate-900 dark:text-white truncate mb-2" title={doc.fileName}>
-                                                                    {doc.fileName ? doc.fileName : 'Untitled Document'}
-                                                                </h3>
-                                                                <div className="space-y-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                                    {doc.shipmentId && (
-                                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Ref: <span className="text-blue-600">{doc.shipmentId.referenceId}</span></p>
-                                                                    )}
-                                                                    {user.role === 'MANAGER' && doc.customerId && (
-                                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Consignor: <span className="text-slate-900 dark:text-slate-300">{doc.customerId.name}</span></p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                                                                <span className="text-[10px] text-slate-400 font-bold">{formatDate(doc.createdAt)}</span>
-                                                                <div className="flex gap-2">
-                                                                    <a href={buildDocumentUrl(doc.filePath)} target="_blank" rel="noreferrer" className="p-2 bg-slate-50 dark:bg-white/5 rounded-lg text-slate-400 hover:text-blue-600">
-                                                                        <Eye className="h-4 w-4" />
-                                                                    </a>
-                                                                    {user.role === 'MANAGER' && (
-                                                                        <button onClick={() => deleteMutation.mutate(doc._id)} className="p-2 bg-slate-50 dark:bg-white/5 rounded-lg text-slate-400 hover:text-rose-600">
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </button>
-                                                                    )}
+
+                                                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Calendar className="h-3 w-3 text-slate-400" />
+                                                                        <span className="text-[10px] text-slate-400 font-bold uppercase">{formatDate(doc.createdAt)}</span>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <a
+                                                                            href={buildDocumentUrl(doc.filePath)}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="h-10 w-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-xl text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                                                        >
+                                                                            <Eye className="h-4 w-4" />
+                                                                        </a>
+                                                                        {user.role === 'MANAGER' && (
+                                                                            <button
+                                                                                onClick={() => deleteMutation.mutate(doc._id)}
+                                                                                className="h-10 w-10 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-xl text-slate-400 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
@@ -403,32 +436,46 @@ export default function Documents() {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="py-20 text-center text-slate-400">
-                                        <AlertTriangle className="mx-auto h-12 w-12 opacity-20 mb-4" />
-                                        <h4 className="text-lg font-bold text-slate-900 dark:text-white">No documents found</h4>
-                                        <p className="text-sm">Try adjusting your filters or search terms.</p>
+                                    <div className="py-32 text-center bg-slate-50 dark:bg-white/5 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5">
+                                        <div className="h-24 w-24 mx-auto rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center mb-6">
+                                            <FileText className="h-12 w-12 text-slate-400" />
+                                        </div>
+                                        <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Vault Entry Empty</h4>
+                                        <p className="text-slate-500 max-w-sm mx-auto mt-2 font-medium">No specialized documentation found for this category criteria. Please verify search parameters or filters.</p>
+                                        <button
+                                            onClick={() => { setSearchTerm(''); setFilterType('ALL'); }}
+                                            className="mt-8 text-blue-600 font-black text-xs uppercase tracking-[0.2em] hover:text-blue-700 underline"
+                                        >
+                                            Reset Archive Scanning
+                                        </button>
                                     </div>
                                 )}
 
                                 {/* Pagination */}
                                 {data?.pagination && data.pagination.totalPages > 1 && (
-                                    <div className="flex items-center justify-center gap-4 py-8">
+                                    <div className="flex items-center justify-center gap-6 py-12">
                                         <button
                                             disabled={page === 1}
                                             onClick={() => setPage(p => Math.max(1, p - 1))}
-                                            className="p-3 rounded-xl bg-white border border-slate-200 disabled:opacity-50 hover:bg-slate-50"
+                                            className="h-14 w-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 disabled:opacity-30 hover:scale-105 transition-all shadow-md flex items-center justify-center"
                                         >
-                                            <ChevronLeft className="h-4 w-4" />
+                                            <ChevronLeft className="h-6 w-6" />
                                         </button>
-                                        <span className="text-sm font-bold text-slate-600">
-                                            Page {page} of {data.pagination.totalPages}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 text-white font-black text-sm shadow-lg shadow-blue-500/20">
+                                                {page}
+                                            </span>
+                                            <span className="text-slate-400 px-2 font-black">/</span>
+                                            <span className="text-slate-600 dark:text-slate-400 font-black text-sm">
+                                                {data.pagination.totalPages}
+                                            </span>
+                                        </div>
                                         <button
                                             disabled={page === data.pagination.totalPages}
                                             onClick={() => setPage(p => Math.min(data.pagination.totalPages, p + 1))}
-                                            className="p-3 rounded-xl bg-white border border-slate-200 disabled:opacity-50 hover:bg-slate-50"
+                                            className="h-14 w-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 disabled:opacity-30 hover:scale-105 transition-all shadow-md flex items-center justify-center"
                                         >
-                                            <ChevronRight className="h-4 w-4" />
+                                            <ChevronRight className="h-6 w-6" />
                                         </button>
                                     </div>
                                 )}

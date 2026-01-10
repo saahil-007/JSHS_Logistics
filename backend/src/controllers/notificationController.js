@@ -38,3 +38,23 @@ export async function resolveNotification(req, res) {
     res.status(400).json({ error: { message: error.message } })
   }
 }
+
+export async function getUnreadNotifications(req, res) {
+  const query = { userId: req.user._id, readAt: { $exists: false } }
+
+  if (['CUSTOMER', 'DRIVER', 'MANAGER'].includes(req.user.role)) {
+    Object.assign(query, {
+      $or: [
+        { 'metadata.roleTargeted': req.user.role },
+        { 'metadata.roleTargeted': { $exists: false } },
+      ],
+    })
+  }
+
+  if (req.query.importance) {
+    query.importance = req.query.importance;
+  }
+
+  const rows = await Notification.find(query).sort({ createdAt: -1 }).lean()
+  res.json({ notifications: rows })
+}

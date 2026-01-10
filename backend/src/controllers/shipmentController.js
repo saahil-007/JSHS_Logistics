@@ -354,6 +354,7 @@ export async function getShipment(req, res) {
     query.populate('assignedDriverId', 'name performanceRating challansCount totalTrips yearsOfExperience')
   } else if (req.user.role === 'MANAGER') {
     query.populate('assignedDriverId', 'name email phone performanceRating licenseNumber totalTrips challansCount')
+      .populate('customerId', 'name email phone legalName address')
   }
 
   const shipment = await query.lean()
@@ -1033,6 +1034,11 @@ export async function markShipmentLoaded(req, res) {
   }
 }
 
+// Alias for markShipmentLoaded as pickup
+export async function pickupShipment(req, res) {
+  return markShipmentLoaded(req, res);
+}
+
 // Function to upload proof of loading document
 export async function uploadProofOfLoading(req, res) {
   if (!req.file) {
@@ -1450,9 +1456,16 @@ export async function requestShipmentOtp(req, res) {
     if (type === 'START') {
       // 1. Send to Consignor (Customer) Email
       const customer = await User.findById(shipment.customerId);
-      if (customer && customer.email) {
-        await sendOtpEmail(customer.email, otp, 'SHIPMENT_START');
-        transmissionStatus = true;
+      if (customer) {
+        if (customer.email) {
+          await sendOtpEmail(customer.email, otp, 'SHIPMENT_START');
+          transmissionStatus = true;
+        }
+        if (customer.phone) {
+          const body = `Your pickup verification code for Shipment ${shipment.referenceId} is ${otp}. Share this ONLY with the driver at pickup time.`;
+          const ok = await sendSMS(customer.phone, body);
+          if (ok) transmissionStatus = true;
+        }
       }
     } else if (type === 'COMPLETE') {
       // 2. Send to Consignee Phone via Twilio

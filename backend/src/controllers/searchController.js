@@ -1,6 +1,7 @@
 import { Shipment } from '../models/Shipment.js'
 import { User } from '../models/User.js'
 import { Vehicle } from '../models/Vehicle.js'
+import { Document } from '../models/Document.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 
 export const globalSearch = asyncHandler(async (req, res) => {
@@ -52,6 +53,17 @@ export const globalSearch = asyncHandler(async (req, res) => {
         .limit(5)
         .lean()
 
+    // Search Documents
+    const documents = await Document.find({
+        $or: [
+            { fileName: regex },
+            { type: regex }
+        ]
+    })
+        .select('fileName type shipmentId filePath')
+        .limit(5)
+        .lean()
+
     // Formulate the results
     const results = [
         ...shipments.map(s => ({
@@ -67,7 +79,7 @@ export const globalSearch = asyncHandler(async (req, res) => {
             type: u.role.toLowerCase(),
             title: u.name,
             subtitle: u.email,
-            link: u.role === 'DRIVER' ? `/app/fleet/drivers` : `/app/customers` // Note: Customer page might not exist yet, but it's a placeholder
+            link: u.role === 'DRIVER' ? `/app/fleet/drivers` : `/app/customers`
         })),
         ...vehicles.map(v => ({
             id: v._id,
@@ -76,6 +88,13 @@ export const globalSearch = asyncHandler(async (req, res) => {
             subtitle: v.model,
             status: v.status,
             link: `/app/fleet/vehicles`
+        })),
+        ...documents.map(d => ({
+            id: d._id,
+            type: 'document',
+            title: d.fileName,
+            subtitle: d.type.replace(/_/g, ' '),
+            link: `/app/shipments/${d.shipmentId?._id || d.shipmentId}`
         }))
     ]
 

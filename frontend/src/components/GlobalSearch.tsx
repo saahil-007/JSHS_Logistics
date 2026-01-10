@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, Package, User, Truck, MapPin, Loader2, X } from 'lucide-react'
+import { Search, Package, User, Truck, MapPin, Loader2, X, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
@@ -7,7 +7,7 @@ import { useDebounce } from '../hooks/useDebounce'
 
 interface SearchResult {
     id: string
-    type: 'shipment' | 'driver' | 'customer' | 'vehicle'
+    type: 'shipment' | 'driver' | 'customer' | 'vehicle' | 'document'
     title: string
     subtitle: string
     status?: string
@@ -84,6 +84,7 @@ export function GlobalSearch() {
             case 'driver': return <User className="h-4 w-4" />
             case 'customer': return <User className="h-4 w-4 text-indigo-400" />
             case 'vehicle': return <Truck className="h-4 w-4" />
+            case 'document': return <FileText className="h-4 w-4 text-purple-600" />
             default: return <MapPin className="h-4 w-4" />
         }
     }
@@ -151,7 +152,8 @@ export function GlobalSearch() {
                                 >
                                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 dark:border-white/10 transition-colors ${result.type === 'shipment' ? 'bg-blue-50 text-blue-600' :
                                         result.type === 'driver' ? 'bg-emerald-50 text-emerald-600' :
-                                            result.type === 'vehicle' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-600'
+                                            result.type === 'vehicle' ? 'bg-amber-50 text-amber-600' :
+                                                result.type === 'document' ? 'bg-purple-50 text-purple-600' : 'bg-slate-50 text-slate-600'
                                         }`}>
                                         {getIcon(result.type)}
                                     </div>

@@ -5,12 +5,12 @@ import { sendEmail } from './emailService.js'
 import { getShipmentStatusTemplate } from '../utils/mailTemplates.js'
 
 
-export async function createNotification({ userId, type, severity = 'INFO', message, metadata }) {
+export async function createNotification({ userId, type, severity = 'INFO', importance = 'LOW', title, message, metadata }) {
   if (!userId) {
     console.warn(`[NOTIF] Skipping notification of type ${type} - No userId provided.`);
     return null;
   }
-  const doc = await Notification.create({ userId, type, severity, message, metadata })
+  const doc = await Notification.create({ userId, type, severity, importance, title, message, metadata })
 
   const io = getIO()
   if (io) {
@@ -20,6 +20,8 @@ export async function createNotification({ userId, type, severity = 'INFO', mess
       userId: doc.userId, // Add userId for client-side legacy verification
       type: doc.type,
       severity: doc.severity,
+      importance: doc.importance,
+      title: doc.title,
       message: doc.message,
       metadata: doc.metadata,
       createdAt: doc.createdAt,
@@ -75,11 +77,15 @@ export async function notifyAllStakeholders(shipment, eventType, customMessage =
     const template = getNotificationTemplate(eventType, shipment, role);
     const message = customMessage || template.message;
     const severity = template.severity;
+    const importance = template.importance || 'LOW';
+    const title = template.title || eventType.replace(/_/g, ' ');
 
     const notif = await createNotification({
       userId: id,
       type: eventType,
       severity,
+      importance,
+      title,
       message,
       metadata: {
         shipmentId: shipment._id,

@@ -50,6 +50,7 @@ import {
   cancelShipment,
   requestShipmentOtp,
   automateJourneyPaperwork,
+  pickupShipment,
 } from '../controllers/shipmentController.js'
 
 export const shipmentRouter = Router()
@@ -65,6 +66,7 @@ shipmentRouter.delete('/:id', requireRole('MANAGER'), asyncHandler(deleteShipmen
 
 shipmentRouter.post('/:id/assign', requireRole('MANAGER'), asyncHandler(assignShipment))
 shipmentRouter.post('/:id/dispatch', asyncHandler(dispatchShipment))
+shipmentRouter.post('/:id/pickup', asyncHandler(pickupShipment))
 shipmentRouter.post('/:id/deliver', requireRole(['DRIVER', 'MANAGER']), asyncHandler(deliverShipment))
 
 // **WORKFLOW 3: Driver accept/reject assignment routes**

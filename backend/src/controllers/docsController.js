@@ -259,26 +259,27 @@ export async function listAllDocs(req, res) {
   }
 
   // Categorisation logic
-  // Categorisation logic
   if (category === 'SHIPMENT') {
     // All documents are visible shipment-wise (if owned by user)
+    query.shipmentId = { $exists: true }
   } else if (category === 'DRIVER') {
-    // Drivers mostly care about their own docs
-    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'POD', 'TRIP_SHEET', 'VEHICLE_INSPECTION'] }
+    // Documents relevant to drivers
+    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'POD', 'TRIP_SHEET', 'VEHICLE_INSPECTION', 'DISPATCH_MANIFEST'] }
   } else if (category === 'VEHICLE') {
-    query.type = { $in: ['PACKING_LIST', 'CMR_ROAD_CONSIGNMENT_NOTE', 'VEHICLE_INSPECTION', 'MAINTENANCE_RECORD'] }
+    query.type = { $in: ['PACKING_LIST', 'CMR_ROAD_CONSIGNMENT_NOTE', 'VEHICLE_INSPECTION', 'MAINTENANCE_RECORD', 'VEHICLE_DOCS'] }
   } else if (category === 'CUSTOMER') {
-    query.type = { $in: ['COMMERCIAL_INVOICE', 'CERTIFICATE_OF_ORIGIN', 'BILL_OF_LADING', 'AIR_WAYBILL', 'TELEX_RELEASE', 'SEA_WAYBILL', 'GST_INVOICE'] }
+    query.type = { $in: ['COMMERCIAL_INVOICE', 'CERTIFICATE_OF_ORIGIN', 'BILL_OF_LADING', 'AIR_WAYBILL', 'TELEX_RELEASE', 'SEA_WAYBILL', 'GST_INVOICE', 'POD'] }
   } else if (category === 'CONSIGNOR') {
     query.customerId = { $exists: true }
   } else if (category === 'UNIVERSAL') {
-    query.type = { $in: ['COMMERCIAL_INVOICE', 'PACKING_LIST', 'CERTIFICATE_OF_ORIGIN'] }
+    // Standard transport & billing docs
+    query.type = { $in: ['COMMERCIAL_INVOICE', 'PACKING_LIST', 'CERTIFICATE_OF_ORIGIN', 'POD', 'GST_INVOICE', 'DISPATCH_MANIFEST'] }
   } else if (category === 'SEA') {
     query.type = { $in: ['BILL_OF_LADING', 'TELEX_RELEASE', 'SEA_WAYBILL'] }
   } else if (category === 'AIR') {
     query.type = { $in: ['AIR_WAYBILL'] }
   } else if (category === 'ROAD') {
-    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'TRIP_SHEET'] }
+    query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'TRIP_SHEET', 'DISPATCH_MANIFEST'] }
   } else if (category === 'CUSTOMS') {
     query.type = { $in: ['SHIPPING_BILL', 'BILL_OF_ENTRY'] }
   }

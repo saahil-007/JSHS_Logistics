@@ -113,7 +113,7 @@ export default function NotificationDropdown() {
 
     const markAsRead = async (id: string) => {
         try {
-            await api.post(`/notifications/${id}/read`)
+            await api.patch(`/notifications/${id}/read`)
             setNotifications((prev) =>
                 prev.map((n) => (n._id === id ? { ...n, readAt: new Date().toISOString() } : n))
             )

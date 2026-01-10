@@ -11,6 +11,7 @@ interface Notification {
     message: string;
     type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ERROR';
     read: boolean;
+    importance: 'HIGH' | 'LOW';
     link?: string;
     createdAt: string;
 }
@@ -22,7 +23,7 @@ export default function NotificationStrip() {
     const { data: notifications } = useQuery({
         queryKey: ['unread-notifications'],
         queryFn: async () => {
-            const res = await api.get('/notifications/unread');
+            const res = await api.get('/notifications/unread?importance=HIGH');
             return res.data.notifications as Notification[];
         },
         refetchInterval: 15000, // Poll every 15 seconds
