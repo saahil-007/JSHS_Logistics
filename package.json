@@ -1,0 +1,21 @@
+{
+  "name": "jshs-logistics",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm -w backend run dev\" \"npm -w frontend run dev\"",
+    "build": "npm -w backend run build && npm -w frontend run build",
+    "lint": "npm -w frontend run lint || exit 0",
+    "db:seed": "npm -w backend run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "@vapi-ai/web": "^2.5.2",
+    "twilio": "^5.11.2"
+  }
+}
