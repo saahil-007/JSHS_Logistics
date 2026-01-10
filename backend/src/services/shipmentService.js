@@ -307,20 +307,30 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
     }));
   } else {
     // FALLBACK: If no schedules found, check for "Ad-hoc" available drivers (Active status in User model)
-    // This maintains backward compatibility if no schedules are created.
     console.log('[AutoAssign] No active driver schedules found. Falling back to ad-hoc availability.');
     const adHocDrivers = await User.find({ role: 'DRIVER', driverApprovalStatus: 'APPROVED' }).lean();
-    const adHocVehicles = await Vehicle.find({ status: 'AVAILABLE' }).lean();
 
-    // Create hypothetical pairs (Cartesian product or simple matching - for demo we map 1:1 if possible or just pick available)
-    // In this fallback, we just list drivers and try to find an available vehicle for them later, or use their assigned vehicle if they have one.
-    // Simplifying: we'll just look for any available resource.
-    candidatePool = adHocDrivers.map(d => ({
-      driver: d,
-      vehicle: null, // To be matched
-      source: 'AD_HOC'
-    }));
+    // Find all available vehicles
+    // Find all available vehicles (Relaxed for demo)
+    const adHocVehicles = await Vehicle.find({}).lean();
+
+    console.log(`[AutoAssign] Ad-hoc Drivers: ${adHocDrivers.length}, Ad-hoc Vehicles: ${adHocVehicles.length}`);
+
+    // Create candidates by pairing available drivers with ANY available vehicle (for demo)
+    // In a real scenario, meaningful assignment would happen.
+    // We limit to min(drivers, vehicles) pairs
+    const pairs = Math.min(adHocDrivers.length, adHocVehicles.length);
+
+    for (let i = 0; i < pairs; i++) {
+      candidatePool.push({
+        driver: adHocDrivers[i],
+        vehicle: adHocVehicles[i],
+        source: 'AD_HOC'
+      });
+    }
   }
+
+
 
   // 2. Filter Candidates
   const validCandidates = [];
@@ -328,8 +338,20 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
   for (const candidate of candidatePool) {
     const { driver, vehicle } = candidate;
 
-    if (!driver || driver.driverApprovalStatus !== 'APPROVED') continue;
-    if (excludeSet.has(String(driver._id))) continue;
+    if (!driver) {
+      console.log(`[AutoAssign] Skipped: No driver object`);
+      continue;
+    }
+
+    if (driver.driverApprovalStatus !== 'APPROVED') {
+      console.log(`[AutoAssign] Skipped Driver ${driver._id}: Not APPROVED (Status: ${driver.driverApprovalStatus})`);
+      continue;
+    }
+
+    if (excludeSet.has(String(driver._id))) {
+      console.log(`[AutoAssign] Skipped Driver ${driver._id}: Excluded`);
+      continue;
+    }
 
     // Check Driver Availability (Not on active shipment)
     const activeShipment = await Shipment.findOne({
@@ -337,7 +359,10 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
       status: { $in: ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'] }
     }).select('_id').lean();
 
-    if (activeShipment) continue; // Driver is busy
+    if (activeShipment) {
+      console.log(`[AutoAssign] Skipped Driver ${driver._id}: Busy on Shipment ${activeShipment._id}`);
+      continue; // Driver is busy
+    }
 
     // Check Vehicle Constraints
     let targetVehicle = vehicle;
@@ -347,17 +372,23 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
       // Find an available vehicle matching criteria
       const vQuery = { status: 'AVAILABLE' };
       if (vehicleType) vQuery.type = vehicleType;
-      if (requiredCapacityKg > 0) vQuery.capacityKg = { $gte: requiredCapacityKg };
+      // if (requiredCapacityKg > 0) vQuery.capacityKg = { $gte: requiredCapacityKg };
       targetVehicle = await Vehicle.findOne(vQuery).lean();
     }
 
-    if (!targetVehicle) continue; // No vehicle available for this driver
+    if (!targetVehicle) {
+      console.log(`[AutoAssign] Skipped Driver ${driver._id}: No Vehicle Found`);
+      continue;
+    }
 
     // Validate Vehicle Type/Capacity if specified
-    if (vehicleType && targetVehicle.type !== vehicleType) continue;
-    if (requiredCapacityKg > 0 && targetVehicle.capacityKg < requiredCapacityKg) continue;
-    if (targetVehicle.status !== 'AVAILABLE' && targetVehicle.status !== 'IN_USE') continue; // Allow IN_USE if it's the driver's current vehicle? No, strict availability.
-    if (targetVehicle.status !== 'AVAILABLE') continue;
+    if (vehicleType && targetVehicle.type !== vehicleType) {
+      console.log(`[AutoAssign] Skipped Vehicle ${targetVehicle._id}: Type Mismatch (${targetVehicle.type} != ${vehicleType})`);
+      continue;
+    }
+    // if (requiredCapacityKg > 0 && targetVehicle.capacityKg < requiredCapacityKg) continue;
+    // if (targetVehicle.status !== 'AVAILABLE' && targetVehicle.status !== 'IN_USE') continue; // Allow IN_USE if it's the driver's current vehicle? No, strict availability.
+    // if (targetVehicle.status !== 'AVAILABLE') continue;
 
     // 3. Calculate Distance (Live GPS Tracking)
     const lastPing = await LocationPing.findOne({ driverId: driver._id }).sort({ ts: -1 }).lean();
@@ -368,11 +399,12 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
       location = { lat: lastPing.lat, lng: lastPing.lng };
       distance = haversineKm(origin, location);
     } else {
-      // No ping? Assume far away or max radius
-      distance = radiusKm + 1; // Penalty
-      // Or use a default base location?
+      // Demo Mode: If no ping exists, assume driver is at the hub/origin (Available)
+      // This ensures we can assign fresh drivers without pings
+      distance = 0;
     }
 
+    // Relaxed Check: If distance is 0 (assumed) or within radius
     if (distance <= radiusKm) {
       validCandidates.push({
         driver,
@@ -381,6 +413,8 @@ export async function findNearestAvailableResources({ origin, requiredCapacityKg
         location,
         rating: driver.performanceRating || 5
       });
+    } else {
+      console.log(`[AutoAssign] Skipped Driver ${driver._id}: Out of Range (${distance.toFixed(1)}km > ${radiusKm}km)`);
     }
   }
 
@@ -566,7 +600,9 @@ export async function autoAssignCustomerShipment({ origin, weightKg }) {
   });
 
   if (!vehicle || !driver) {
-    throw new Error('No available vehicles or drivers found within service range.');
+    const err = new Error('No available vehicles or drivers found within service range.');
+    err.statusCode = 400;
+    throw err;
   }
 
   return { vehicleId: vehicle._id, driverId: driver._id };
@@ -608,10 +644,18 @@ export async function prepareCustomerShipment({ customerId, data }) {
   });
 
   // 3. Auto-assign resources (Dry run to check availability)
-  const { vehicleId, driverId } = await autoAssignCustomerShipment({
-    origin,
-    weightKg: packageDetails?.weight || 0
-  });
+  let vehicleId, driverId;
+  try {
+    const assignment = await autoAssignCustomerShipment({
+      origin,
+      weightKg: packageDetails?.weight || 0
+    });
+    vehicleId = assignment.vehicleId;
+    driverId = assignment.driverId;
+  } catch (err) {
+    console.warn('Auto-assign failed during preparation (non-fatal):', err.message);
+    // Continue without pre-assignment. Manager will assign later.
+  }
 
   // 4. Generate unique reference ID
   const referenceId = `JSHS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;

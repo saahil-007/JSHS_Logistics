@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import LocationSearch from '../../components/LocationSearch'
 import { formatCurrency } from '../../utils'
+import { PACKAGE_DIMENSIONS } from '../../constants'
 
 declare global {
     interface Window {
@@ -50,29 +51,42 @@ export default function CustomerCreateShipment() {
     const [createdShipment, setCreatedShipment] = useState<any>(null)
     const [razorpayOrder, setRazorpayOrder] = useState<any>(null)
 
-    // Calculate cost whenever inputs change (mirror backend logic approximately)
+
+
+    // ... existing imports ...
+
+    const [isCustomDimensions, setIsCustomDimensions] = useState(false)
+    // ... existing state ...
+
+    // Replace the local useEffect with API call
     useEffect(() => {
-        if (formData.origin && formData.destination) {
-            // Rough demo distance (in km) if we don't call backend yet
-            const distance = 500;
-            const weightBlocks = Math.max(1, Math.ceil((formData.weight || 0) / 100));
-            const baseRatePerKm = 100;
+        if (!formData.origin || !formData.destination) return
 
-            const categoryMultiplierMap: Record<string, number> = {
-                KIRANA: 1.0,
-                DAWAI: 1.1,
-                KAPDA: 1.0,
-                DAIRY: 1.2,
-                AUTO_PARTS: 1.3,
-                ELECTRONICS: 1.4,
-                CUSTOM: 1.0,
-            };
-            const m = categoryMultiplierMap[formData.category] ?? 1.0;
+        const fetchEstimate = async () => {
+            try {
+                const res = await api.post('/shipments/estimate', {
+                    origin: formData.origin,
+                    destination: formData.destination,
+                    weight: Number(formData.weight),
+                    dimensions: formData.dimensions,
+                    delivery_type: formData.deliveryType,
+                    shipmentType: formData.category
+                })
 
-            const autoPrice = Math.round(distance * baseRatePerKm * weightBlocks * m);
-            setEstimatedCost(autoPrice);
+                if (res.data.serviceable) {
+                    setEstimatedCost(res.data.estimated_cost)
+                }
+            } catch (err) {
+                console.error('Estimation failed', err)
+            }
         }
-    }, [formData.origin, formData.destination, formData.weight, formData.category])
+
+        const timer = setTimeout(() => {
+            if (formData.weight > 0) fetchEstimate()
+        }, 800)
+
+        return () => clearTimeout(timer)
+    }, [formData.origin, formData.destination, formData.weight, formData.dimensions, formData.deliveryType, formData.category])
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
@@ -118,7 +132,7 @@ export default function CustomerCreateShipment() {
                     weight: formData.weight,
                     dimensions: formData.dimensions
                 },
-
+                deliveryType: formData.deliveryType,
                 goodsImages: formData.goodsImages
             }
 
@@ -279,21 +293,45 @@ export default function CustomerCreateShipment() {
                                     <label className="text-sm font-medium">Estimated Weight (kg)</label>
                                     <input
                                         type="number"
+                                        max={1000}
                                         value={formData.weight || ''}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, weight: Number(e.target.value) }))}
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value)
+                                            if (val > 1000) return
+                                            setFormData(prev => ({ ...prev, weight: val }))
+                                        }}
                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                        placeholder="e.g. 50"
+                                        placeholder="e.g. 50 (Max 1000kg)"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Dimensions (L x W x H cm)</label>
-                                    <input
-                                        type="text"
-                                        value={formData.dimensions}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, dimensions: e.target.value }))}
-                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                        placeholder="e.g. 100 x 80 x 60"
-                                    />
+                                    <label className="text-sm font-medium">Dimensions</label>
+                                    <select
+                                        value={isCustomDimensions ? 'custom' : formData.dimensions}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'custom') {
+                                                setIsCustomDimensions(true)
+                                                setFormData(prev => ({ ...prev, dimensions: '' }))
+                                            } else {
+                                                setIsCustomDimensions(false)
+                                                setFormData(prev => ({ ...prev, dimensions: e.target.value }))
+                                            }
+                                        }}
+                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none mb-2"
+                                    >
+                                        {PACKAGE_DIMENSIONS.map(d => (
+                                            <option key={d.value} value={d.value}>{d.label}</option>
+                                        ))}
+                                    </select>
+                                    {isCustomDimensions && (
+                                        <input
+                                            type="text"
+                                            value={formData.dimensions}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, dimensions: e.target.value }))}
+                                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            placeholder="e.g. 100 x 80 x 60"
+                                        />
+                                    )}
                                 </div>
                             </div>
 
@@ -352,7 +390,7 @@ export default function CustomerCreateShipment() {
                             >
                                 Back
                             </button>
-                                <button
+                            <button
                                 onClick={handleSubmit}
                                 disabled={loading || formData.goodsImages.length === 0 || (pricingMode === 'CUSTOM' && (!customPrice || Number(customPrice) <= 0))}
                                 className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2"

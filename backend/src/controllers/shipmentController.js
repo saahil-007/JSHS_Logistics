@@ -39,7 +39,7 @@ const createSchema = z.object({
   }).optional(),
   eta: z.string().datetime().optional(),
   package: z.object({
-    weight: z.number().positive(),
+    weight: z.number().positive().max(1000),
     dimensions: z.string(),
     type: z.string().optional(),
   }),
@@ -53,7 +53,7 @@ const estimateSchema = z.object({
   destination: pointSchema.optional(),
   origin_pincode: z.string().optional(),
   destination_pincode: z.string().optional(),
-  weight: z.number().positive(),
+  weight: z.number().positive().max(1000),
   dimensions: z.string(),
   delivery_type: z.enum(['standard', 'express']).optional(),
   shipmentType: z.string().optional(),

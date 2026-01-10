@@ -339,7 +339,7 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
 
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Weight (kg)</label>
-                                <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none transition-all" />
+                                <input type="number" max={1000} value={weight} onChange={(e) => setWeight(Math.min(1000, Number(e.target.value)))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none transition-all" />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Dimensions</label>

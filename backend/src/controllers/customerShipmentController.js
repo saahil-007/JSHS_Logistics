@@ -11,7 +11,7 @@ import { createNotification } from '../services/notificationService.js';
  */
 export async function handleCustomerCreateShipment(req, res) {
     const customerId = req.user._id;
-    const { origin, destination, packageDetails, deliveryType, goodsImages, paymentOption } = req.body;
+    const { origin, destination, packageDetails, deliveryType, goodsImages, paymentOption, pricingMode, customPrice, category, customCategory } = req.body;
 
     // Default to PAY_NOW to preserve existing behaviour if client doesn't send this field
     const selectedPaymentOption = paymentOption === 'PAY_LATER' ? 'PAY_LATER' : 'PAY_NOW';
@@ -25,7 +25,11 @@ export async function handleCustomerCreateShipment(req, res) {
                 destination,
                 goodsImages: goodsImages || [],
                 packageDetails,
-                deliveryType
+                deliveryType,
+                pricingMode,
+                customPrice,
+                category,
+                customCategory
             }
         });
 
@@ -76,9 +80,9 @@ export async function handleCustomerCreateShipment(req, res) {
 
         // 3B. PAY_LATER flow: directly create shipment with paymentStatus PENDING
         // Import and use the correct function to create the shipment
-        const shipment = await prepareCustomerShipment({
+        const shipment = await createCustomerShipment({
             customerId,
-            data: shipmentData,
+            shipmentData: shipmentData,
         });
 
         return res.status(201).json({
