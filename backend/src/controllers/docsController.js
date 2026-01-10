@@ -240,17 +240,23 @@ export async function generateDocForShipment(req, res) {
 }
 
 export async function listAllDocs(req, res) {
-  if (req.user.role !== 'MANAGER') {
-    return res.status(403).json({ error: { message: 'Forbidden' } })
-  }
-
   const { category } = req.query
   const query = {}
 
-  // Categorisation logic for manager portal (Workflow 10.2)
+  // "Opaque" filtering: Ensure users only see what they own.
+  if (req.user.role === 'DRIVER') {
+    query.driverId = req.user._id
+  } else if (req.user.role === 'CUSTOMER') {
+    query.customerId = req.user._id
+  } else if (req.user.role !== 'MANAGER') {
+    return res.status(403).json({ error: { message: 'Forbidden' } })
+  }
+
+  // Categorisation logic
   if (category === 'SHIPMENT') {
-    // All documents are visible shipment-wise
+    // All documents are visible shipment-wise (if owned by user)
   } else if (category === 'DRIVER') {
+    // Drivers mostly care about their own docs
     query.type = { $in: ['CMR_ROAD_CONSIGNMENT_NOTE', 'POD', 'TRIP_SHEET'] }
   } else if (category === 'VEHICLE') {
     query.type = { $in: ['PACKING_LIST', 'CMR_ROAD_CONSIGNMENT_NOTE', 'VEHICLE_INSPECTION', 'MAINTENANCE_RECORD'] }

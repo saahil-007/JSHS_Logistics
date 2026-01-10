@@ -201,11 +201,27 @@ function getSectionHeading(type) {
       return 'Pre-Journey Dispatch & Safety Checklist'
     case 'E_WAY_BILL':
     case 'CONSIGNMENT_NOTE':
+    case 'CMR_ROAD_CONSIGNMENT_NOTE':
+    case 'TRIP_SHEET':
       return 'Transit Compliance & Statutory Details'
     case 'POD':
       return 'Delivery Confirmation & Receiver Acknowledgement'
     case 'GST_INVOICE':
-      return 'Billing Summary & Tax Details'
+    case 'COMMERCIAL_INVOICE':
+      return 'Billing Summary & Valuation Details'
+    case 'PACKING_LIST':
+      return 'Cargo Manifest & Packaging Details'
+    case 'CERTIFICATE_OF_ORIGIN':
+      return 'Origin Certification & Trade Compliance'
+    case 'BILL_OF_LADING':
+    case 'TELEX_RELEASE':
+    case 'SEA_WAYBILL':
+      return 'Ocean Transport & Cargo Title'
+    case 'AIR_WAYBILL':
+      return 'Air Transport & Consignment Details'
+    case 'SHIPPING_BILL':
+    case 'BILL_OF_ENTRY':
+      return 'Customs Declaration & Clearance'
     default:
       return 'Document Details'
   }

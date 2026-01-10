@@ -3,6 +3,7 @@ import { LocationPing } from '../models/LocationPing.js'
 import { Vehicle } from '../models/Vehicle.js'
 import { User } from '../models/User.js'
 import { DriverEvent } from '../models/DriverEvent.js'
+import { DriverSchedule } from '../models/DriverSchedule.js'
 import { env } from '../config/env.js'
 import { createNotification, createShipmentNotification, createPredictiveNotifications, sendMilestoneNotifications, sendProactiveNotifications } from './notificationService.js'
 import { audit } from './auditService.js'
@@ -281,118 +282,130 @@ export async function addLocationPing({ shipmentId, driverId, lat, lng, speedKmp
   return ping
 }
 
-// **WORKFLOW 3: Enhanced function to find drivers within radius, filter by capacity, sort by rating**
-export async function findNearestAvailableResources({ origin, requiredCapacityKg = 0, vehicleType = null, radiusKm = 10 }) {
-  // Find available vehicles matching criteria
-  const vehicleQuery = { status: 'AVAILABLE' };
-  if (vehicleType) vehicleQuery.type = vehicleType;
-  if (requiredCapacityKg > 0) vehicleQuery.capacityKg = { $gte: requiredCapacityKg };
+// **WORKFLOW 3: Enhanced function to find drivers with ACTIVE SCHEDULES, filter by capacity, prioritized by LEAST DISTANCE**
+export async function findNearestAvailableResources({ origin, requiredCapacityKg = 0, vehicleType = null, radiusKm = 50, excludeDriverIds = [] }) {
+  const now = new Date();
+  const excludeSet = new Set(excludeDriverIds.map(id => String(id)));
 
-  const availableVehicles = await Vehicle.find(vehicleQuery).lean();
+  // 1. Find Drivers with Active Schedules ("Compliance with Schedule")
+  // We look for schedules that are either ACTIVE or SCHEDULED and cover the current time.
+  const activeSchedules = await DriverSchedule.find({
+    status: { $in: ['ACTIVE', 'SCHEDULED'] },
+    shiftStart: { $lte: now },
+    shiftEnd: { $gte: now }
+  }).populate('driverId').populate('vehicleId').lean();
 
-  // Find approved drivers sorted by rating (descending) and utilization
-  const availableDrivers = await User.find({
-    role: 'DRIVER',
-    driverApprovalStatus: 'APPROVED'
-  }).sort({ performanceRating: -1 }).lean();
+  let candidatePool = [];
 
-  // Get latest location pings for each driver to calculate distance
-  const candidatesWithDistance = [];
+  if (activeSchedules.length > 0) {
+    // Transform schedules into candidates
+    candidatePool = activeSchedules.map(s => ({
+      driver: s.driverId,
+      vehicle: s.vehicleId,
+      scheduleId: s._id,
+      source: 'SCHEDULED'
+    }));
+  } else {
+    // FALLBACK: If no schedules found, check for "Ad-hoc" available drivers (Active status in User model)
+    // This maintains backward compatibility if no schedules are created.
+    console.log('[AutoAssign] No active driver schedules found. Falling back to ad-hoc availability.');
+    const adHocDrivers = await User.find({ role: 'DRIVER', driverApprovalStatus: 'APPROVED' }).lean();
+    const adHocVehicles = await Vehicle.find({ status: 'AVAILABLE' }).lean();
 
-  // Parallelize driver checks
-  const driverPromises = availableDrivers.map(async (driver) => {
-    // Get driver's last known location from their most recent shipment ping
+    // Create hypothetical pairs (Cartesian product or simple matching - for demo we map 1:1 if possible or just pick available)
+    // In this fallback, we just list drivers and try to find an available vehicle for them later, or use their assigned vehicle if they have one.
+    // Simplifying: we'll just look for any available resource.
+    candidatePool = adHocDrivers.map(d => ({
+      driver: d,
+      vehicle: null, // To be matched
+      source: 'AD_HOC'
+    }));
+  }
+
+  // 2. Filter Candidates
+  const validCandidates = [];
+
+  for (const candidate of candidatePool) {
+    const { driver, vehicle } = candidate;
+
+    if (!driver || driver.driverApprovalStatus !== 'APPROVED') continue;
+    if (excludeSet.has(String(driver._id))) continue;
+
+    // Check Driver Availability (Not on active shipment)
+    const activeShipment = await Shipment.findOne({
+      assignedDriverId: driver._id,
+      status: { $in: ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'] }
+    }).select('_id').lean();
+
+    if (activeShipment) continue; // Driver is busy
+
+    // Check Vehicle Constraints
+    let targetVehicle = vehicle;
+
+    // If no vehicle in schedule (or ad-hoc), find one
+    if (!targetVehicle) {
+      // Find an available vehicle matching criteria
+      const vQuery = { status: 'AVAILABLE' };
+      if (vehicleType) vQuery.type = vehicleType;
+      if (requiredCapacityKg > 0) vQuery.capacityKg = { $gte: requiredCapacityKg };
+      targetVehicle = await Vehicle.findOne(vQuery).lean();
+    }
+
+    if (!targetVehicle) continue; // No vehicle available for this driver
+
+    // Validate Vehicle Type/Capacity if specified
+    if (vehicleType && targetVehicle.type !== vehicleType) continue;
+    if (requiredCapacityKg > 0 && targetVehicle.capacityKg < requiredCapacityKg) continue;
+    if (targetVehicle.status !== 'AVAILABLE' && targetVehicle.status !== 'IN_USE') continue; // Allow IN_USE if it's the driver's current vehicle? No, strict availability.
+    if (targetVehicle.status !== 'AVAILABLE') continue;
+
+    // 3. Calculate Distance (Live GPS Tracking)
     const lastPing = await LocationPing.findOne({ driverId: driver._id }).sort({ ts: -1 }).lean();
-
-    let driverLocation = null;
     let distance = Infinity;
+    let location = null;
 
     if (lastPing) {
-      driverLocation = { lat: lastPing.lat, lng: lastPing.lng };
-      distance = haversineKm(origin, driverLocation);
+      location = { lat: lastPing.lat, lng: lastPing.lng };
+      distance = haversineKm(origin, location);
     } else {
-      // If no ping, assume driver is available but distance unknown (assign lower priority)
-      distance = radiusKm; // Place at edge of radius
+      // No ping? Assume far away or max radius
+      distance = radiusKm + 1; // Penalty
+      // Or use a default base location?
     }
 
-    // **WORKFLOW 3: Filter by radius (10km default)**
     if (distance <= radiusKm) {
-      // Check if driver is not currently assigned to an active shipment
-      const activeShipment = await Shipment.findOne({
-        assignedDriverId: driver._id,
-        status: { $in: ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'] }
-      }).lean();
-
-      if (!activeShipment) {
-        return {
-          driver,
-          distance,
-          location: driverLocation,
-          utilizationScore: activeShipment ? 1 : 0, // 0 = available, 1 = busy
-          rating: driver.performanceRating || 5
-        };
-      }
+      validCandidates.push({
+        driver,
+        vehicle: targetVehicle,
+        distance,
+        location,
+        rating: driver.performanceRating || 5
+      });
     }
-    return null;
+  }
+
+  // 4. Sort by LEAST DISTANCE (Primary) then Rating (Secondary)
+  validCandidates.sort((a, b) => {
+    // Prioritize distance
+    if (Math.abs(a.distance - b.distance) > 0.5) { // 0.5km difference matters
+      return a.distance - b.distance;
+    }
+    // Tie-break with rating
+    return b.rating - a.rating;
   });
 
-  const results = await Promise.all(driverPromises);
-  candidatesWithDistance.push(...results.filter(r => r !== null));
-
-  // **WORKFLOW 3: Sort by rating (desc) then distance (asc)**
-  candidatesWithDistance.sort((a, b) => {
-    if (b.rating !== a.rating) return b.rating - a.rating;
-    return a.distance - b.distance;
-  });
-
-  // Fallback: If no drivers in radius, try picking ANY approved driver
-  let nearestDriver = candidatesWithDistance.length > 0 ? candidatesWithDistance[0].driver : null;
-  if (!nearestDriver && availableDrivers.length > 0) {
-    nearestDriver = availableDrivers[0];
-    console.log(`[Demo Fallback] No drivers in ${radiusKm}km radius. Picking first available approved driver: ${nearestDriver.name}`);
-  }
-
-  // Find first available vehicle for the best candidate
-  let nearestVehicle = availableVehicles.length > 0 ? availableVehicles[0] : null;
-
-  // Fallback: If no vehicle matches criteria, try picking ANY available vehicle
-  if (!nearestVehicle) {
-    const anyAvailableRecord = await Vehicle.findOne({ status: 'AVAILABLE' }).lean();
-    if (anyAvailableRecord) {
-      nearestVehicle = anyAvailableRecord;
-      console.log(`[Demo Fallback] No vehicle matching criteria. Picking any available vehicle: ${nearestVehicle.plateNumber}`);
-    }
-  }
-
-  // SUPER FALLBACK for demo: If still null, pick literally any record from DB
-  if (!nearestDriver) {
-    const anyDriver = await User.findOne({ role: 'DRIVER' }).lean();
-    if (anyDriver) {
-      nearestDriver = anyDriver;
-      console.log(`[Super Fallback] Picking literally ANY driver: ${anyDriver.name}`);
-    }
-  }
-
-  if (!nearestVehicle) {
-    const anyVehicle = await Vehicle.findOne({}).lean();
-    if (anyVehicle) {
-      nearestVehicle = anyVehicle;
-      console.log(`[Super Fallback] Picking literally ANY vehicle: ${anyVehicle.plateNumber}`);
-    }
-  }
-
-  let candidatesList = candidatesWithDistance;
+  const bestMatch = validCandidates.length > 0 ? validCandidates[0] : null;
 
   return {
-    vehicle: nearestVehicle,
-    driver: nearestDriver,
-    candidates: candidatesList,
-    matchedVehicles: availableVehicles
+    vehicle: bestMatch?.vehicle || null,
+    driver: bestMatch?.driver || null,
+    candidates: validCandidates,
+    matchedVehicles: validCandidates.map(c => c.vehicle)
   };
 }
 
 // **WORKFLOW 3: Enhanced auto-assign with manager fallback and driver request**
-export async function autoAssignShipment({ shipmentId, actorId, requiredCapacityKg = 0, vehicleType = null }) {
+export async function autoAssignShipment({ shipmentId, actorId, requiredCapacityKg = 0, vehicleType = null, excludeDriverIds = [] }) {
   const shipment = await Shipment.findById(shipmentId);
   if (!shipment) {
     const err = new Error('Shipment not found');
@@ -404,7 +417,8 @@ export async function autoAssignShipment({ shipmentId, actorId, requiredCapacity
   const { vehicle, driver, candidates, matchedVehicles } = await findNearestAvailableResources({
     origin: shipment.origin,
     requiredCapacityKg: requiredCapacityKg || shipment.packageDetails?.weight || 0,
-    vehicleType
+    vehicleType,
+    excludeDriverIds
   });
 
   // **WORKFLOW 3: If no candidate found, alert manager**
@@ -420,7 +434,7 @@ export async function autoAssignShipment({ shipmentId, actorId, requiredCapacity
         metadata: { shipmentId: shipment._id, availableVehicles: matchedVehicles.length, availableDrivers: candidates.length }
       });
     }
-    const err = new Error('No available vehicle or driver found within 10km radius. Manager has been notified.');
+    const err = new Error('No available vehicle or driver found within service radius (50km). Manager has been notified.');
     err.statusCode = 400;
     throw err;
   }
@@ -440,7 +454,7 @@ export async function autoAssignShipment({ shipmentId, actorId, requiredCapacity
     action: 'SHIPMENT_AUTO_ASSIGNED',
     entityType: 'Shipment',
     entityId: shipment._id,
-    metadata: { vehicleId: vehicle._id, driverId: driver._id, radiusKm: 10 }
+    metadata: { vehicleId: vehicle._id, driverId: driver._id, radiusKm: 50 }
   });
 
   await ShipmentEvent.create({

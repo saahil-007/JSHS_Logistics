@@ -319,8 +319,8 @@ export async function createShipment(req, res) {
       actorId: req.user._id,
     })
     await createShipmentNotification(out, 'SHIPMENT_ASSIGNED', `Shipment ${shipment.referenceId} has been assigned.`)
-  } else if (req.user.role === 'MANAGER') {
-    // Auto-assign only if manager created it, or leave for assignment engine
+  } else {
+    // **AUTOMATION**: Always attempt auto-assignment on creation
     try {
       out = await autoAssignShipment({ shipmentId: shipment._id, actorId: req.user._id });
     } catch (e) { console.warn('Auto-assign failed:', e.message); }
@@ -1179,7 +1179,8 @@ export async function rejectShipmentAssignment(req, res) {
     const { autoAssignShipment } = await import('../services/shipmentService.js');
     const reassignedShipment = await autoAssignShipment({
       shipmentId: shipment._id,
-      actorId: null // System action
+      actorId: null, // System action
+      excludeDriverIds: [rejectedDriverId]
     });
 
     return res.json({

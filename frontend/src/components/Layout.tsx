@@ -80,6 +80,7 @@ export function Layout() {
           items: [
             { to: '/app/driver', label: 'Drive Mode', icon: Navigation },
             { to: '/app/shipments', label: 'My History', icon: Package },
+            { to: '/app/documents', label: 'Documents', icon: FileText },
           ]
         },
         {
@@ -96,6 +97,7 @@ export function Layout() {
           items: [
             { to: '/app/create-shipment', label: 'Book New', icon: PlusCircle },
             { to: '/app/shipments', label: 'My Shipments', icon: Package },
+            { to: '/app/documents', label: 'Documents', icon: FileText },
           ]
         },
         {

@@ -114,7 +114,7 @@ export default function App() {
           <Route
             path="documents"
             element={
-              <ProtectedRoute roles={['MANAGER']}>
+              <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
                 <Documents />
               </ProtectedRoute>
             }

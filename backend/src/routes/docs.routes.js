@@ -27,7 +27,7 @@ export const docsRouter = Router()
 
 docsRouter.use(requireAuth)
 
-docsRouter.get('/', requireRole('MANAGER'), asyncHandler(listAllDocs))
+docsRouter.get('/', asyncHandler(listAllDocs))
 
 docsRouter.get('/shipments/:shipmentId', asyncHandler(listDocsForShipment))
 docsRouter.post('/shipments/:shipmentId', upload.single('file'), asyncHandler(uploadDocToShipment))

@@ -15,10 +15,11 @@ import {
 import { api } from '../../lib/api'
 import { useAuth } from '../../auth/AuthContext'
 import { formatDate, buildDocumentUrl } from '../../utils'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Skeleton from '../../components/Skeleton'
 import toast from 'react-hot-toast'
+import IssueDocumentModal from '../../components/IssueDocumentModal'
 
 interface Document {
     _id: string
@@ -48,12 +49,12 @@ interface Document {
     createdAt: string
 }
 
-const CATEGORIES = [
-    { id: 'ALL', label: 'All Documents', icon: FileText },
-    { id: 'SHIPMENT', label: 'Shipment-wise', icon: Zap },
-    { id: 'DRIVER', label: 'Driver-wise', icon: Shield },
-    { id: 'VEHICLE', label: 'Vehicle-wise', icon: RefreshCw },
-    { id: 'CUSTOMER', label: 'Customer-wise', icon: Filter },
+const ALL_CATEGORIES = [
+    { id: 'ALL', label: 'All Documents', icon: FileText, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
+    { id: 'SHIPMENT', label: 'Shipment-wise', icon: Zap, roles: ['MANAGER', 'DRIVER', 'CUSTOMER'] },
+    { id: 'DRIVER', label: 'Driver-wise', icon: Shield, roles: ['MANAGER', 'DRIVER'] },
+    { id: 'VEHICLE', label: 'Vehicle-wise', icon: RefreshCw, roles: ['MANAGER', 'DRIVER'] },
+    { id: 'CUSTOMER', label: 'Customer-wise', icon: Filter, roles: ['MANAGER', 'CUSTOMER'] },
 ]
 
 export default function Documents() {
@@ -62,6 +63,7 @@ export default function Documents() {
     const [searchTerm, setSearchTerm] = useState('')
     const [category, setCategory] = useState<string | null>(null) // Start with null for block view
     const [filterType, setFilterType] = useState('ALL')
+    const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)
 
     const { data: docs, isLoading } = useQuery({
         queryKey: ['all-docs', category],
@@ -71,7 +73,7 @@ export default function Documents() {
             })
             return res.data.documents as Document[]
         },
-        enabled: user?.role === 'MANAGER' && category !== null
+        enabled: !!user && category !== null
     })
 
     const deleteMutation = useMutation({
@@ -94,35 +96,33 @@ export default function Documents() {
         return matchesSearch && matchesType
     })
 
-    const docTypes = [
-        'ALL',
-        'COMMERCIAL_INVOICE',
-        'PACKING_LIST',
-        'CERTIFICATE_OF_ORIGIN',
-        'BILL_OF_LADING',
-        'TELEX_RELEASE',
-        'SEA_WAYBILL',
-        'AIR_WAYBILL',
-        'CMR_ROAD_CONSIGNMENT_NOTE',
-        'TRIP_SHEET',
-        'SHIPPING_BILL',
-        'BILL_OF_ENTRY',
-        'POD',
-        'GST_INVOICE'
-    ]
+    const docTypes = useMemo(() => {
+        const types = [
+            'ALL',
+            'COMMERCIAL_INVOICE',
+            'PACKING_LIST',
+            'CERTIFICATE_OF_ORIGIN',
+            'BILL_OF_LADING',
+            'TELEX_RELEASE',
+            'SEA_WAYBILL',
+            'AIR_WAYBILL',
+            'CMR_ROAD_CONSIGNMENT_NOTE',
+            'TRIP_SHEET',
+            'SHIPPING_BILL',
+            'BILL_OF_ENTRY',
+            'POD',
+            'GST_INVOICE'
+        ]
+        // Filter types based on role could be added here if needed, but keeping all for now as "Opaque" view handles data
+        return types;
+    }, [])
+
+    const visibleCategories = useMemo(() => {
+        return ALL_CATEGORIES.filter(cat => cat.roles.includes(user?.role || ''))
+    }, [user?.role])
 
 
-    if (user?.role !== 'MANAGER') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-                <Shield className="h-16 w-16 text-slate-200" />
-                <h2 className="text-xl font-black text-slate-900">Manager Access Only</h2>
-                <p className="text-slate-500 text-center max-w-xs">
-                    This document management hub is restricted to logistics managers for secure tracking and compliance.
-                </p>
-            </div>
-        )
-    }
+    if (!user) return null;
 
     return (
         <div className="space-y-8 pb-20">
@@ -130,7 +130,9 @@ export default function Documents() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500 text-white uppercase tracking-widest">Global Logistics Compliance</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500 text-white uppercase tracking-widest">
+                            {user.role === 'MANAGER' ? 'Global Logistics Compliance' : 'Secure Paperwork Center'}
+                        </span>
                     </div>
                     <div className="flex items-center gap-4">
                         {category && (
@@ -142,17 +144,17 @@ export default function Documents() {
                             </button>
                         )}
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-                            {category ? CATEGORIES.find(c => c.id === category)?.label : 'Paperwork Control'}
+                            {category ? visibleCategories.find(c => c.id === category)?.label : 'Paperwork Control'}
                         </h1>
                     </div>
                     <p className="text-slate-500 text-sm font-medium mt-1">
                         {category ? `Managing ${category.toLowerCase()} critical documents` : 'Select a category to manage specific document types'}
                     </p>
                 </div>
-                {category && (
+                {category && user.role === 'MANAGER' && (
                     <div className="flex gap-3">
                         <button
-                            onClick={() => { }} // Placeholder for now or remove
+                            onClick={() => setIsIssueModalOpen(true)}
                             className="btn-primary flex items-center gap-2 shadow-lg shadow-blue-500/20"
                         >
                             <Plus className="h-4 w-4" />
@@ -170,7 +172,7 @@ export default function Documents() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="space-y-10"
                     >
-                        {/* Master Document Type Selector (Requested) */}
+                        {/* Master Document Type Selector */}
                         <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden relative group">
                             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <FileText size={100} />
@@ -179,7 +181,7 @@ export default function Documents() {
                                 <div className="max-w-md">
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Paperwork Vault Search</h3>
                                     <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                        Select a specific document type to see all records across the entire logistical network.
+                                        Select a specific document type to access records in the secure vault.
                                     </p>
                                 </div>
                                 <div className="flex-1 max-w-sm">
@@ -211,7 +213,7 @@ export default function Documents() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {CATEGORIES.filter(c => c.id !== 'ALL').map((cat) => (
+                            {visibleCategories.filter(c => c.id !== 'ALL').map((cat) => (
                                 <button
                                     key={cat.id}
                                     onClick={() => setCategory(cat.id)}
@@ -225,10 +227,10 @@ export default function Documents() {
                                     </div>
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{cat.label}</h3>
                                     <p className="text-slate-500 text-sm font-medium max-w-[240px]">
-                                        Access specialized documents for {cat.id.toLowerCase()} lifecycle and compliance.
+                                        Access specialized documents for {cat.id.toLowerCase()} lifecycle.
                                     </p>
                                     <div className="mt-6 flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest">
-                                        Explore Vault
+                                        Open Vault
                                         <Plus className="h-3 w-3 rotate-45" />
                                     </div>
                                 </button>
@@ -247,7 +249,7 @@ export default function Documents() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search documents, entities..."
+                                    placeholder="Search documents..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="input-glass pl-10 w-full"
@@ -296,16 +298,16 @@ export default function Documents() {
                                                 </span>
                                             </div>
                                             <h3 className="font-black text-slate-900 dark:text-white truncate mb-4" title={doc.fileName}>
-                                                {doc.fileName}
+                                                {doc.fileName ? doc.fileName : 'Untitled Document'}
                                             </h3>
                                             <div className="space-y-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 {doc.shipmentId && (
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase">Shipment: <span className="text-blue-600">{doc.shipmentId.referenceId}</span></p>
                                                 )}
-                                                {doc.customerId && (
+                                                {user.role === 'MANAGER' && doc.customerId && (
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase">Customer: <span className="text-slate-900 dark:text-slate-300">{doc.customerId.name}</span></p>
                                                 )}
-                                                {doc.driverId && (
+                                                {user.role === 'MANAGER' && doc.driverId && (
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase">Driver: <span className="text-slate-900 dark:text-slate-300">{doc.driverId.name}</span></p>
                                                 )}
                                             </div>
@@ -316,9 +318,11 @@ export default function Documents() {
                                                 <a href={buildDocumentUrl(doc.filePath)} target="_blank" rel="noreferrer" className="p-2 bg-slate-50 dark:bg-white/5 rounded-lg text-slate-400 hover:text-blue-600">
                                                     <Eye className="h-4 w-4" />
                                                 </a>
-                                                <button onClick={() => deleteMutation.mutate(doc._id)} className="p-2 bg-slate-50 dark:bg-white/5 rounded-lg text-slate-400 hover:text-rose-600">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                {user.role === 'MANAGER' && (
+                                                    <button onClick={() => deleteMutation.mutate(doc._id)} className="p-2 bg-slate-50 dark:bg-white/5 rounded-lg text-slate-400 hover:text-rose-600">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>
@@ -326,7 +330,7 @@ export default function Documents() {
                             ) : (
                                 <div className="col-span-full py-32 text-center text-slate-400">
                                     <AlertTriangle className="mx-auto h-12 w-12 opacity-20 mb-4" />
-                                    <h4 className="text-lg font-black text-slate-900 dark:text-white">Documents Pending</h4>
+                                    <h4 className="text-lg font-black text-slate-900 dark:text-white">Vault Empty</h4>
                                     <p className="text-sm">No {category?.toLowerCase()} documents found for this criteria.</p>
                                 </div>
                             )}
@@ -334,6 +338,7 @@ export default function Documents() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <IssueDocumentModal isOpen={isIssueModalOpen} onClose={() => setIsIssueModalOpen(false)} />
         </div>
     )
 }
