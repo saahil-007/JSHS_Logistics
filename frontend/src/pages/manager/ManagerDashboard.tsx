@@ -104,17 +104,17 @@ export default function ManagerDashboard() {
             {/* Main KPI Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
-                    label="Total Shipments"
+                    label="Ecosystem Volume"
                     value={kpis?.shipmentsTotal ?? 0}
-                    sub="Lifetime volume"
+                    sub="Lifetime throughput"
                     icon={Package}
                     color="blue"
                     delay={0}
                 />
                 <MetricCard
-                    label="In Transit"
+                    label="Live Operations"
                     value={kpis?.shipmentsInTransit ?? 0}
-                    sub="Currently moving"
+                    sub="Currently active"
                     icon={TrendingUp}
                     color="cyan"
                     delay={0.1}

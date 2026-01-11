@@ -22,7 +22,7 @@ export default function CustomerDashboard() {
     const { data: shipments, isLoading, isError, refetch } = useQuery<Shipment[]>({
         queryKey: ['customer-shipments', user?.id],
         queryFn: async () => {
-            const res = await shipmentApi.getAll({ limit: 5 })
+            const res = await shipmentApi.getAll({ limit: 5, tab: 'active' })
             return res.shipments
         },
         staleTime: 0, // Always fetch fresh data
@@ -38,9 +38,9 @@ export default function CustomerDashboard() {
 
     if (isError) return (
         <div className="p-6">
-            <ErrorDisplay 
-                message="Failed to load dashboard data. Please check your connection." 
-                onRetry={() => refetch()} 
+            <ErrorDisplay
+                message="Failed to load dashboard data. Please check your connection."
+                onRetry={() => refetch()}
             />
         </div>
     )

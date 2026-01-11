@@ -37,7 +37,7 @@ export default function Driver() {
   const shipmentsQ = useQuery({
     queryKey: ['shipments'],
     queryFn: async () => {
-      const res = await api.get('/shipments')
+      const res = await api.get('/shipments', { params: { tab: 'active' } })
       return res.data.shipments as Shipment[]
     },
   })

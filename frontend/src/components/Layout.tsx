@@ -17,7 +17,8 @@ import {
   Wallet,
   PlusCircle,
   ScrollText,
-  Zap
+  Zap,
+  UserPlus
 } from 'lucide-react'
 
 import { useAuth } from '../auth/AuthContext'
@@ -55,6 +56,7 @@ export function Layout() {
         {
           title: 'Fleet Management',
           items: [
+            { to: '/app/onboarding', label: 'Asset Onboarding', icon: UserPlus },
             { to: '/app/fleet', label: 'Vehicles', icon: Truck },
             { to: '/app/drivers', label: 'Drivers', icon: Users },
             { to: '/app/fleet-performance', label: 'Performance', icon: Activity },
@@ -249,8 +251,8 @@ function SidebarLink({
     <Link
       to={to}
       className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all group ${active
-          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
+        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
         }`}
     >
       <Icon className={`h-5 w-5 shrink-0 ${active ? 'text-white' : 'text-slate-400 group-hover:text-slate-900 dark:text-slate-500 dark:group-hover:text-white'}`} />

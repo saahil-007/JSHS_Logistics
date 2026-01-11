@@ -16,6 +16,13 @@ const vehicleSchema = new mongoose.Schema(
     type: { type: String, enum: ['TRUCK_LG', 'TRUCK_SM', 'VAN', 'BIKE'], default: 'TRUCK_SM' },
     fuelType: { type: String, enum: ['DIESEL', 'PETROL', 'ELECTRIC', 'CNG'], default: 'DIESEL' },
     gpsDeviceId: { type: String, unique: true, sparse: true }, // IMEI or Device ID
+    simNumber: { type: String }, // SIM used for telemetry
+    vin: { type: String, unique: true, sparse: true }, // Vehicle Identification Number
+    make: { type: String },
+    year: { type: Number },
+    color: { type: String },
+    engineCapacityCc: { type: Number },
+
     currentLocation: {
       lat: { type: Number },
       lng: { type: Number },
@@ -27,7 +34,16 @@ const vehicleSchema = new mongoose.Schema(
     fuelThresholdLowLiters: { type: Number, default: 15 },
 
     lastServiceOdometerKm: { type: Number, default: 0 },
+    lastServiceDate: { type: Date },
+    nextServiceDueAtKm: { type: Number, default: 10000 },
+    nextServiceDueDate: { type: Date },
     serviceThresholdKm: { type: Number, default: 500 }, // Service every 500km
+    serviceHistory: [{
+      date: { type: Date },
+      description: { type: String },
+      odometerKm: { type: Number },
+      cost: { type: Number }
+    }],
 
     insuranceDetails: {
       policyNumber: { type: String },
@@ -40,9 +56,17 @@ const vehicleSchema = new mongoose.Schema(
     },
 
     isRefrigerated: { type: Boolean, default: false },
+    operationalTempRange: {
+      min: { type: Number, default: -25 },
+      max: { type: Number, default: -15 }
+    },
     currentTemperatureC: { type: Number },
     temperatureThresholdMaxC: { type: Number, default: -15 }, // Set Alert if above this
     temperatureThresholdMinC: { type: Number, default: -25 }, // Set Alert if below this
+
+    // Assignments
+    assignedDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    currentShipmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shipment' },
 
     // Advanced Health Metrics
     batteryVoltage: { type: Number, default: 12.6 }, // 12.0 to 14.0

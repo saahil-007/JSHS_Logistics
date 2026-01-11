@@ -261,7 +261,7 @@ export default function CreateShipmentModal({ onClose, onSuccess }: CreateShipme
                 delivery_type: deliveryType,
                 consignee: {
                     name: consigneeName,
-                    contact: consigneeContact
+                    contact: consigneeContact.startsWith('+91') ? consigneeContact : `+91${consigneeContact}`
                 },
                 customerId: customerId || undefined,
                 driverId: driverId || undefined,

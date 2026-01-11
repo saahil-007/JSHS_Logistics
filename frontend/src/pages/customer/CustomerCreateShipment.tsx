@@ -53,7 +53,7 @@ export default function CustomerCreateShipment() {
     const [createdShipment, setCreatedShipment] = useState<any>(null)
     const [razorpayOrder, setRazorpayOrder] = useState<any>(null)
 
-    const isPhoneValid = /^[6-9]\d{9}$/.test(formData.consigneeContact)
+    const isPhoneValid = /^(\+91)?[6-9]\d{9}$/.test(formData.consigneeContact)
 
 
 
@@ -139,7 +139,7 @@ export default function CustomerCreateShipment() {
                 deliveryType: formData.deliveryType,
                 goodsImages: formData.goodsImages,
                 consigneeName: formData.consigneeName,
-                consigneeContact: formData.consigneeContact
+                consigneeContact: formData.consigneeContact.startsWith('+91') ? formData.consigneeContact : `+91${formData.consigneeContact}`
             }
 
             console.log('Submitting Payload:', payload)

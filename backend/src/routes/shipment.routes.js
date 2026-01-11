@@ -61,7 +61,7 @@ shipmentRouter.get('/', asyncHandler(listShipments))
 shipmentRouter.post('/estimate', asyncHandler(estimateShipment))
 shipmentRouter.post('/', requireRole(['MANAGER', 'CUSTOMER']), asyncHandler(createShipment))
 shipmentRouter.get('/:id', asyncHandler(getShipment))
-shipmentRouter.patch('/:id', requireRole('MANAGER'), asyncHandler(updateShipment))
+shipmentRouter.patch('/:id', requireRole(['MANAGER', 'CUSTOMER']), asyncHandler(updateShipment))
 shipmentRouter.delete('/:id', requireRole('MANAGER'), asyncHandler(deleteShipment))
 
 shipmentRouter.post('/:id/assign', requireRole('MANAGER'), asyncHandler(assignShipment))

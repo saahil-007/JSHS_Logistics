@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import { Vehicle } from '../models/Vehicle.js'
 import { User } from '../models/User.js'
-import { createVehicle as createVehicleSvc, updateVehicle as updateVehicleSvc } from '../services/fleetService.js'
+import {
+  createVehicle as createVehicleSvc,
+  updateVehicle as updateVehicleSvc,
+  generateDummyVehicle,
+  generateDummyDriver
+} from '../services/fleetService.js'
 
 const createVehicleSchema = z.object({
   plateNumber: z.string().min(3),
@@ -15,23 +20,34 @@ const createVehicleSchema = z.object({
   capacityKg: z.number().positive().optional(),
   fuelType: z.enum(['DIESEL', 'PETROL', 'ELECTRIC', 'CNG']).optional(),
   type: z.enum(['TRUCK_LG', 'TRUCK_SM', 'VAN', 'BIKE']).optional(),
-
-  // Advanced Health Metrics
-  batteryVoltage: z.number().optional(),
-  batteryHealthPercent: z.number().optional(),
-  engineStatus: z.enum(['OFF', 'IDLE', 'RUNNING', 'WARNING']).optional(),
-  engineLoadPercent: z.number().optional(),
-  oilLifeRemainingPercent: z.number().optional(),
-  tirePressurePsi: z.object({
-    frontLeft: z.number().optional(),
-    frontRight: z.number().optional(),
-    rearLeft: z.number().optional(),
-    rearRight: z.number().optional()
+  vin: z.string().optional(),
+  make: z.string().optional(),
+  year: z.number().optional(),
+  color: z.string().optional(),
+  engineCapacityCc: z.number().optional(),
+  simNumber: z.string().optional(),
+  gpsDeviceId: z.string().optional(),
+  insuranceDetails: z.object({
+    policyNumber: z.string().optional(),
+    expiryDate: z.string().optional(),
+    provider: z.string().optional()
   }).optional(),
-  coolantTempC: z.number().optional(),
+  isRefrigerated: z.boolean().optional(),
+  operationalTempRange: z.object({
+    min: z.number().optional(),
+    max: z.number().optional()
+  }).optional()
 })
 
 const updateVehicleSchema = createVehicleSchema.partial()
+
+export async function getDummyVehicleData(req, res) {
+  res.json(generateDummyVehicle())
+}
+
+export async function getDummyDriverData(req, res) {
+  res.json(generateDummyDriver())
+}
 
 export async function listVehicles(req, res) {
   const { page = 1, limit = 10 } = req.query
@@ -47,8 +63,6 @@ export async function listVehicles(req, res) {
           total: { $sum: 1 },
           active: { $sum: { $cond: [{ $eq: ['$status', 'IN_USE'] }, 1, 0] } },
           maintenance: { $sum: { $cond: [{ $eq: ['$status', 'MAINTENANCE'] }, 1, 0] } },
-          // We can't easily do 'dueSoon' in aggregation because it's a calculated field in JS, 
-          // but we can approximate it if we know the threshold. OdometerKm and nextServiceAtKm are in DB.
           dueSoon: { $sum: { $cond: [{ $lte: [{ $subtract: ['$nextServiceAtKm', '$odometerKm'] }, 500] }, 1, 0] } }
         }
       }
@@ -67,23 +81,23 @@ export async function listVehicles(req, res) {
 }
 
 export async function createVehicle(req, res) {
-  const data = createVehicleSchema.parse(req.body)
+  const data = req.body
   const vehicle = await createVehicleSvc(data)
   res.status(201).json({ vehicle })
 }
 
 export async function updateVehicle(req, res) {
-  const data = updateVehicleSchema.parse(req.body)
+  const data = req.body
   const vehicle = await updateVehicleSvc(req.params.id, data)
   res.json({ vehicle })
 }
 
 export async function listDrivers(req, res) {
   const rows = await User.find({
-    role: 'DRIVER',
-    driverApprovalStatus: 'APPROVED',
+    role: 'DRIVER'
   })
-    .select('_id name email role driverApprovalStatus')
+    .select('-passwordHash')
+    .sort({ createdAt: -1 })
     .lean()
 
   res.json({ drivers: rows })
@@ -105,9 +119,9 @@ export async function approveDriver(req, res) {
   if (!driver || driver.role !== 'DRIVER') return res.status(404).json({ error: { message: 'Driver not found' } })
 
   driver.driverApprovalStatus = 'APPROVED'
+  driver.onboardingStatus = 'VERIFIED'
   await driver.save()
 
-  // Lazy import to avoid circular deps between controllers/services
   const { createNotification } = await import('../services/notificationService.js')
   await createNotification({
     userId: driver._id,
@@ -148,7 +162,8 @@ export async function getDriverProfile(req, res) {
 }
 
 export async function onboardDriver(req, res) {
-  const { name, email, phone, licenseNumber, bankDetails } = req.body
+  const data = req.body
+  const { email, phone } = data
 
   // Check if driver already exists by email or phone
   let user = await User.findOne({
@@ -160,32 +175,26 @@ export async function onboardDriver(req, res) {
       return res.status(400).json({ error: { message: 'User already exists with a different role' } })
     }
     // Update existing driver
-    user.name = name
-    user.licenseNumber = licenseNumber
-    user.bankDetails = bankDetails
+    Object.assign(user, data)
     user.onboardingStatus = 'COMPLETED'
-    user.driverApprovalStatus = 'PENDING' // Needs manager approval
+    user.driverApprovalStatus = 'PENDING'
   } else {
-    // Create new driver (without passwordHash, they will need to set it via invite/reset)
+    // Create new driver
     user = new User({
-      name,
-      email: email.toLowerCase(),
-      phone,
+      ...data,
       role: 'DRIVER',
-      licenseNumber,
-      bankDetails,
       onboardingStatus: 'COMPLETED',
-      driverApprovalStatus: 'PENDING'
+      driverApprovalStatus: 'PENDING',
+      passwordHash: 'AUTOGEN_PLACEHOLDER' // Ideally should be handled via set password link
     })
   }
 
   await user.save()
 
-  // Notify manager about new driver onboarding
   const { createNotification } = await import('../services/notificationService.js')
   await createNotification({
     type: 'DRIVER_ONBOARDED',
-    message: `New driver ${name} has completed onboarding and is awaiting approval.`,
+    message: `New driver ${user.name} has completed onboarding and is awaiting approval.`,
     severity: 'INFO',
     metadata: { driverId: user._id }
   })

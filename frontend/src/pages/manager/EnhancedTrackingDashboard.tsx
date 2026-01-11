@@ -104,7 +104,7 @@ export default function EnhancedTrackingDashboard() {
 
   // Filter active shipments
   const activeShipments = shipmentsQuery.data!.filter(s =>
-    s.status === 'IN_TRANSIT' || s.status === 'DISPATCHED'
+    ['CREATED', 'ASSIGNED', 'PICKED_UP', 'DISPATCHED', 'IN_TRANSIT', 'DELAYED', 'OUT_FOR_DELIVERY'].includes(s.status)
   )
 
   // Calculate statistics

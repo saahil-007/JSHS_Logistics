@@ -131,8 +131,27 @@ export type Vehicle = {
   capacityKg: number
   type: 'TRUCK_LG' | 'TRUCK_SM' | 'VAN' | 'BIKE'
   fuelType: 'DIESEL' | 'PETROL' | 'ELECTRIC' | 'CNG'
+
+  vin?: string
+  make?: string
+  year?: number
+  color?: string
+  engineCapacityCc?: number
+  simNumber?: string
+  gpsDeviceId?: string
+
   lastServiceOdometerKm?: number
+  lastServiceDate?: string
+  nextServiceDueAtKm?: number
+  nextServiceDueDate?: string
   serviceThresholdKm?: number
+  serviceHistory?: Array<{
+    date: string
+    description: string
+    odometerKm: number
+    cost: number
+  }>
+
   registrationDetails?: {
     registrationDate?: string
     ownerName?: string
@@ -142,8 +161,70 @@ export type Vehicle = {
     expiryDate?: string
     provider?: string
   }
+
+  isRefrigerated?: boolean
+  operationalTempRange?: {
+    min: number
+    max: number
+  }
+
+  assignedDriverId?: string
+  currentShipmentId?: string
+
   createdAt: string
   updatedAt: string
+}
+
+export type User = {
+  _id: string
+  name: string
+  email: string
+  phone: string
+  role: Role
+  driverApprovalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'
+  performanceRating?: number
+  awards?: string[]
+  dob?: string
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
+  emergencyContact?: {
+    name: string
+    phone: string
+  }
+  address?: string
+  gstNumber?: string
+  legalName?: string
+  aadhaarNumber?: string
+  panNumber?: string
+  employmentId?: string
+  joiningDate?: string
+  bgVerificationStatus?: 'PENDING' | 'VERIFIED' | 'FAILED'
+  otpVerified?: boolean
+  licenseNumber?: string
+  licenseType?: string
+  licenseIssueDate?: string
+  licenseExpiryDate?: string
+  challansCount?: number
+  verifiedBadges?: string[]
+  totalTrips?: number
+  yearsOfExperience?: number
+  medicalFitnessCertificateUrl?: string
+  insuranceCoverage?: string
+  insuranceProvider?: string
+  bankDetails?: {
+    accountNumber: string
+    ifscCode: string
+    bankName: string
+    holderName: string
+  }
+  onboardingStatus?: 'INCOMPLETE' | 'DOCUMENT_SUBMITTED' | 'COMPLETED' | 'VERIFIED'
+  documents?: {
+    aadhaarFront?: string
+    aadhaarBack?: string
+    licenseFront?: string
+    licenseBack?: string
+    panCard?: string
+    medicalCertificate?: string
+  }
 }
 
 export type Invoice = {

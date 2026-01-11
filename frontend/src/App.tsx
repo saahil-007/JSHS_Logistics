@@ -26,6 +26,9 @@ import PendingApprovals from './pages/manager/PendingApprovals'
 import Documents from './pages/manager/Documents'
 import IotMonitor from './pages/manager/IotMonitor'
 import Profile from './pages/common/Profile'
+import OnboardingHub from './pages/manager/onboarding/OnboardingHub'
+import VehicleOnboarding from './pages/manager/onboarding/VehicleOnboarding'
+import DriverOnboarding from './pages/manager/onboarding/DriverOnboarding'
 import { getAppType } from './utils/subdomainUtils'
 import VapiWidget from './components/VapiWidget'
 
@@ -108,6 +111,32 @@ export default function App() {
             element={
               <ProtectedRoute roles={['MANAGER']}>
                 <Drivers />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Onboarding */}
+          <Route
+            path="onboarding"
+            element={
+              <ProtectedRoute roles={['MANAGER']}>
+                <OnboardingHub />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="onboarding/vehicle"
+            element={
+              <ProtectedRoute roles={['MANAGER']}>
+                <VehicleOnboarding />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="onboarding/driver"
+            element={
+              <ProtectedRoute roles={['MANAGER']}>
+                <DriverOnboarding />
               </ProtectedRoute>
             }
           />

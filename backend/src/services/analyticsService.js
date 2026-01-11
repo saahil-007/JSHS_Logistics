@@ -8,10 +8,13 @@ import { haversineKm } from '../utils/geo.js'
 export async function getOverviewKPIs() {
   const q = {}
 
-  const [shipmentsTotal, inTransit, delivered, vehiclesTotal, invoicesPaidCount] = await Promise.all([
+  const activeStatuses = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'DISPATCHED', 'IN_TRANSIT', 'DELAYED', 'OUT_FOR_DELIVERY'];
+  const pastStatuses = ['DELIVERED', 'CLOSED', 'CANCELLED'];
+
+  const [shipmentsTotal, activeCount, pastCount, vehiclesTotal, invoicesPaidCount] = await Promise.all([
     Shipment.countDocuments(q),
-    Shipment.countDocuments({ ...q, status: 'IN_TRANSIT' }),
-    Shipment.countDocuments({ ...q, status: 'DELIVERED' }),
+    Shipment.countDocuments({ ...q, status: { $in: activeStatuses } }),
+    Shipment.countDocuments({ ...q, status: { $in: pastStatuses } }),
     Vehicle.countDocuments(q),
     Invoice.countDocuments({ ...q, status: 'PAID' }),
   ])
@@ -50,8 +53,8 @@ export async function getOverviewKPIs() {
 
   return {
     shipmentsTotal,
-    shipmentsInTransit: inTransit,
-    shipmentsDelivered: delivered,
+    shipmentsInTransit: activeCount,
+    shipmentsDelivered: pastCount,
     vehiclesTotal,
     invoicesPaid: invoicesPaidCount,
     revenuePaid,

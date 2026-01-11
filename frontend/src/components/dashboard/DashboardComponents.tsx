@@ -102,7 +102,7 @@ export function RecentShipmentsList({ limit = 5 }: { limit?: number }) {
     const { data, isLoading } = useQuery({
         queryKey: ['recentShipments', limit],
         queryFn: async () => {
-            const res = await api.get('/shipments', { params: { limit } })
+            const res = await api.get('/shipments', { params: { limit, tab: 'active' } })
             return res.data.shipments
         }
     })

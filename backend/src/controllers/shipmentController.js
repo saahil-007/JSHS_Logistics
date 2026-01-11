@@ -36,7 +36,7 @@ const createSchema = z.object({
   customerId: z.string().optional(),
   consignee: z.object({
     name: z.string().optional(),
-    contact: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number').optional()
+    contact: z.string().regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number. Must start with +91').optional()
   }).optional(),
   eta: z.string().datetime().optional(),
   package: z.object({
@@ -71,7 +71,7 @@ const updateSchema = z.object({
   status: z.enum(['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELAYED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CLOSED', 'CANCELLED']).optional(),
   consignee: z.object({
     name: z.string().optional(),
-    contact: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number').optional()
+    contact: z.string().regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian 10-digit phone number. Must start with +91').optional()
   }).optional(),
 })
 
@@ -352,6 +352,7 @@ export async function getShipment(req, res) {
   // Basic access control and selective population
   if (req.user.role === 'CUSTOMER') {
     query.populate('assignedDriverId', 'name performanceRating challansCount totalTrips yearsOfExperience')
+      .populate('customerId', 'name email phone legalName address')
   } else if (req.user.role === 'MANAGER') {
     query.populate('assignedDriverId', 'name email phone performanceRating licenseNumber totalTrips challansCount')
       .populate('customerId', 'name email phone legalName address')
@@ -366,12 +367,14 @@ export async function getShipment(req, res) {
 
   if (req.user.role === 'DRIVER') {
     if (req.user.driverApprovalStatus !== 'APPROVED') return res.status(403).json({ error: { message: 'Driver not approved' } })
-    if (String(shipment.assignedDriverId ?? '') !== String(req.user._id)) {
+    const driverId = shipment.assignedDriverId?._id || shipment.assignedDriverId
+    if (String(driverId ?? '') !== String(req.user._id)) {
       return res.status(403).json({ error: { message: 'Forbidden' } })
     }
   }
 
-  if (req.user.role === 'CUSTOMER' && String(shipment.customerId ?? '') !== String(req.user._id)) {
+  const customerId = shipment.customerId?._id || shipment.customerId
+  if (req.user.role === 'CUSTOMER' && String(customerId ?? '') !== String(req.user._id)) {
     return res.status(403).json({ error: { message: 'Forbidden' } })
   }
 
@@ -380,6 +383,26 @@ export async function getShipment(req, res) {
 
 export async function updateShipment(req, res) {
   const data = updateSchema.parse(req.body)
+
+  let shipment = await Shipment.findById(req.params.id)
+  if (!shipment) return res.status(404).json({ error: { message: 'Shipment not found' } })
+
+  assertShipmentAccess(req, shipment)
+
+  // If CUSTOMER, they can only change consignee
+  if (req.user.role === 'CUSTOMER') {
+    const allowedFields = ['consignee']
+    const attemptedFields = Object.keys(data)
+    const unauthorizedFields = attemptedFields.filter(f => !allowedFields.includes(f))
+
+    if (unauthorizedFields.length > 0) {
+      return res.status(403).json({
+        error: {
+          message: `Customers can only update: ${allowedFields.join(', ')}. Attempted unauthorized fields: ${unauthorizedFields.join(', ')}`
+        }
+      })
+    }
+  }
 
   const $set = {
     ...(data.referenceId ? { referenceId: data.referenceId } : {}),
@@ -401,7 +424,7 @@ export async function updateShipment(req, res) {
     return res.status(400).json({ error: { message: 'No fields to update' } })
   }
 
-  const shipment = await Shipment.findByIdAndUpdate(
+  shipment = await Shipment.findByIdAndUpdate(
     req.params.id,
     {
       ...(Object.keys($set).length ? { $set } : {}),
@@ -576,148 +599,170 @@ export async function dispatchShipment(req, res) {
 }
 
 export async function deliverShipment(req, res) {
-  const shipment = await Shipment.findById(req.params.id)
-  if (!shipment) return res.status(404).json({ error: { message: 'Shipment not found' } })
+  try {
+    const shipment = await Shipment.findById(req.params.id)
+    if (!shipment) return res.status(404).json({ error: { message: 'Shipment not found' } })
 
-  if (String(shipment.assignedDriverId ?? '') !== String(req.user._id)) {
-    return res.status(403).json({ error: { message: 'Forbidden' } })
-  }
+    // Allow both validation by explicit driver ID or if user is Manager (override)
+    // NOTE: Managers should be able to force-deliver.
+    const isAssignedDriver = String(shipment.assignedDriverId ?? '') === String(req.user._id)
+    const isManager = req.user.role === 'MANAGER'
 
-  const { otp } = req.body
-  if (!otp) return res.status(400).json({ error: { message: 'Delivery completion OTP is required' } })
-
-  if (shipment.deliveryCompleteOtp !== otp) {
-    return res.status(400).json({ error: { message: 'Invalid delivery completion OTP' } })
-  }
-
-  shipment.status = 'DELIVERED'
-  shipment.lastEventAt = new Date()
-
-  if (typeof shipment.distanceKm !== 'number') {
-    shipment.distanceKm = Math.round(haversineKm(shipment.origin, shipment.destination) * 100) / 100
-  }
-
-  // 7.2 shipment_events (Atomic Write for Timeline)
-  await ShipmentEvent.create({
-    shipmentId: shipment._id,
-    type: 'SHIPMENT_DELIVERED',
-    description: `Shipment delivered successfully by ${req.user.name}.`,
-    location: shipment.destination,
-    actorId: req.user._id,
-    metadata: {
-      otpUsed: otp,
-      driverId: req.user._id
+    if (!isAssignedDriver && !isManager) {
+      return res.status(403).json({ error: { message: 'Forbidden' } })
     }
-  });
 
-  // Calculate Driver Earnings (e.g. 70% of shipment price)
-  if (!shipment.driverEarnings?.amount) {
-    const earnings = (shipment.price || 0) * 0.70;
-    shipment.driverEarnings = {
-      amount: Math.round(earnings),
-      status: 'AVAILABLE',
-      availableAt: new Date()
+    const { otp } = req.body
+
+    // Managers can bypass OTP if needed, or we enforce it strictly. 
+    // For now, enforcing OTP for everyone to ensure process integrity, 
+    // unless it's a "FORCE DELIVER" specific action (not implemented).
+    if (!otp) return res.status(400).json({ error: { message: 'Delivery completion OTP is required' } })
+
+    if (shipment.deliveryCompleteOtp !== otp) {
+      return res.status(400).json({ error: { message: 'Invalid delivery completion OTP' } })
+    }
+
+    shipment.status = 'DELIVERED'
+    shipment.lastEventAt = new Date()
+
+    if (typeof shipment.distanceKm !== 'number') {
+      try {
+        shipment.distanceKm = Math.round(haversineKm(shipment.origin, shipment.destination) * 100) / 100
+      } catch (e) {
+        console.error('Error calculating distance:', e)
+        shipment.distanceKm = 0
+      }
+    }
+
+    // 7.2 shipment_events (Atomic Write for Timeline)
+    await ShipmentEvent.create({
+      shipmentId: shipment._id,
+      type: 'SHIPMENT_DELIVERED',
+      description: `Shipment delivered successfully by ${req.user.name}.`,
+      location: shipment.destination,
+      actorId: req.user._id,
+      metadata: {
+        otpUsed: otp,
+        driverId: req.user._id
+      }
+    });
+
+    // Calculate Driver Earnings (e.g. 70% of shipment price)
+    if (!shipment.driverEarnings?.amount) {
+      const earnings = (shipment.price || 0) * 0.70;
+      shipment.driverEarnings = {
+        amount: Math.round(earnings),
+        status: 'AVAILABLE',
+        availableAt: new Date()
+      };
+    }
+
+    await shipment.save()
+
+    // Create notification for shipment delivered
+    await createShipmentNotification(shipment, 'SHIPMENT_DELIVERED', `Shipment ${shipment.referenceId} has been successfully delivered.`);
+
+    // Fleet update: increment odometer and set maintenance status if due
+    if (shipment.assignedVehicleId) {
+      const v = await Vehicle.findById(shipment.assignedVehicleId)
+      if (v) {
+        const distanceGained = shipment.distanceKm ?? 0
+        v.odometerKm = Math.round((v.odometerKm + distanceGained) * 100) / 100
+
+        // Calculate distance since last service
+        const distanceSinceService = v.odometerKm - (v.lastServiceOdometerKm || 0)
+        const isDue = distanceSinceService >= (v.serviceThresholdKm || 500)
+
+        if (v.status === 'IN_USE') {
+          v.status = 'AVAILABLE' // Vacant now
+        }
+
+        // If due and now vacant, mark for maintenance
+        if (isDue && v.status === 'AVAILABLE') {
+          v.status = 'MAINTENANCE'
+
+          // Notification for Manager
+          const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
+          if (manager?._id) {
+            await createNotification({
+              userId: manager._id,
+              message: `URGENT: Vehicle ${v.plateNumber} reached ${Math.round(distanceSinceService)}km since last service and is now vacant. Marked for MAINTENANCE.`,
+              type: 'MAINTENANCE',
+              severity: 'CRITICAL',
+              metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
+            })
+          }
+        } else if (isDue) {
+          // Notification that it WILL need maintenance once vacant if it wasn't already marked
+          const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
+          if (manager?._id) {
+            await createNotification({
+              userId: manager._id,
+              message: `Vehicle ${v.plateNumber} has exceeded service limit (${Math.round(distanceSinceService)}km). It will be marked for maintenance once current task is finished.`,
+              type: 'MAINTENANCE',
+              severity: 'WARNING',
+              metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
+            })
+          }
+        }
+
+        await v.save()
+      }
+    }
+
+    res.json({ shipment })
+
+    // Real Automation: Auto-generate delivery paperwork
+    const generateDeliveryDocs = async () => {
+      const types = ['POD', 'GST_INVOICE'];
+
+      // Ensure we have full details for the Invoice
+      await shipment.populate('customerId assignedDriverId assignedVehicleId');
+
+      for (const type of types) {
+        const existing = await Document.findOne({ shipmentId: shipment._id, type });
+        if (!existing) {
+
+          // Dynamic Password Logic for Invoice
+          let options = {};
+          if (type === 'GST_INVOICE') {
+            const refPart = (shipment.referenceId || '0000').slice(0, 4);
+            const namePart = (shipment.customerId?.legalName || shipment.customerId?.name || 'CUST').replace(/\s+/g, '').slice(0, 4);
+            const password = `${refPart}${namePart}`;
+            options = { password };
+
+            console.log(`[INVOICE] Generating password protected PDF. Password: ${password}`);
+          }
+
+          const { fileName, relativePath, absolutePath } = await generateShipmentPdf({ shipment, type, actor: req.user, options })
+
+          await Document.create({
+            shipmentId: shipment._id,
+            type,
+            fileName,
+            filePath: relativePath,
+            uploadedById: req.user._id,
+            verified: true,
+            verifiedAt: new Date(),
+            verifiedById: req.user._id,
+          });
+
+          // Email Trigger for Invoice
+          if (type === 'GST_INVOICE' && shipment.customerId?.email) {
+            await sendInvoiceEmail(shipment.customerId, shipment, absolutePath, options.password);
+          }
+        }
+      }
     };
+    generateDeliveryDocs().catch(console.error);
+
+    // Final Invoicing for delivery
+    automateInvoicing(shipment, req.user).catch(err => console.error('Final invoicing failed:', err.message));
+  } catch (error) {
+    console.error('Error in deliverShipment:', error);
+    res.status(500).json({ error: { message: error.message || 'Internal Server Error' } });
   }
-
-  await shipment.save()
-
-  // Fleet update: increment odometer and set maintenance status if due
-  if (shipment.assignedVehicleId) {
-    const v = await Vehicle.findById(shipment.assignedVehicleId)
-    if (v) {
-      const distanceGained = shipment.distanceKm ?? 0
-      v.odometerKm = Math.round((v.odometerKm + distanceGained) * 100) / 100
-
-      // Calculate distance since last service
-      const distanceSinceService = v.odometerKm - (v.lastServiceOdometerKm || 0)
-      const isDue = distanceSinceService >= (v.serviceThresholdKm || 500)
-
-      if (v.status === 'IN_USE') {
-        v.status = 'AVAILABLE' // Vacant now
-      }
-
-      // If due and now vacant, mark for maintenance
-      if (isDue && v.status === 'AVAILABLE') {
-        v.status = 'MAINTENANCE'
-
-        // Notification for Manager
-        const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
-        if (manager?._id) {
-          await createNotification({
-            userId: manager._id,
-            message: `URGENT: Vehicle ${v.plateNumber} reached ${Math.round(distanceSinceService)}km since last service and is now vacant. Marked for MAINTENANCE.`,
-            type: 'MAINTENANCE',
-            severity: 'CRITICAL',
-            metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
-          })
-        }
-      } else if (isDue) {
-        // Notification that it WILL need maintenance once vacant if it wasn't already marked
-        const manager = await User.findOne({ role: 'MANAGER' }).select('_id').lean()
-        if (manager?._id) {
-          await createNotification({
-            userId: manager._id,
-            message: `Vehicle ${v.plateNumber} has exceeded service limit (${Math.round(distanceSinceService)}km). It will be marked for maintenance once current task is finished.`,
-            type: 'MAINTENANCE',
-            severity: 'WARNING',
-            metadata: { vehicleId: v._id, plateNumber: v.plateNumber },
-          })
-        }
-      }
-
-      await v.save()
-    }
-  }
-
-  res.json({ shipment })
-
-  // Real Automation: Auto-generate delivery paperwork
-  const generateDeliveryDocs = async () => {
-    const types = ['POD', 'GST_INVOICE'];
-
-    // Ensure we have full details for the Invoice
-    await shipment.populate('customerId assignedDriverId assignedVehicleId');
-
-    for (const type of types) {
-      const existing = await Document.findOne({ shipmentId: shipment._id, type });
-      if (!existing) {
-
-        // Dynamic Password Logic for Invoice
-        let options = {};
-        if (type === 'GST_INVOICE') {
-          const refPart = (shipment.referenceId || '0000').slice(0, 4);
-          const namePart = (shipment.customerId?.legalName || shipment.customerId?.name || 'CUST').replace(/\s+/g, '').slice(0, 4);
-          const password = `${refPart}${namePart}`;
-          options = { password };
-
-          console.log(`[INVOICE] Generating password protected PDF. Password: ${password}`);
-        }
-
-        const { fileName, relativePath, absolutePath } = await generateShipmentPdf({ shipment, type, actor: req.user, options })
-
-        await Document.create({
-          shipmentId: shipment._id,
-          type,
-          fileName,
-          filePath: relativePath,
-          uploadedById: req.user._id,
-          verified: true,
-          verifiedAt: new Date(),
-          verifiedById: req.user._id,
-        });
-
-        // Email Trigger for Invoice
-        if (type === 'GST_INVOICE' && shipment.customerId?.email) {
-          await sendInvoiceEmail(shipment.customerId, shipment, absolutePath, options.password);
-        }
-      }
-    }
-  };
-  generateDeliveryDocs().catch(console.error);
-
-  // Final Invoicing for delivery
-  automateInvoicing(shipment, req.user).catch(err => console.error('Final invoicing failed:', err.message));
 }
 
 function assertShipmentAccess(req, shipment) {

@@ -47,6 +47,9 @@ export default function ShipmentDetail() {
   const [assignVehicleId, setAssignVehicleId] = useState<string | null>(null)
   const [editStatus, setEditStatus] = useState<string | null>(null)
   const [editEta, setEditEta] = useState<string | null>(null)
+  const [editConsigneeName, setEditConsigneeName] = useState<string | null>(null)
+  const [editConsigneeContact, setEditConsigneeContact] = useState<string | null>(null)
+  const [isConsigneeModalOpen, setIsConsigneeModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false)
@@ -249,19 +252,47 @@ export default function ShipmentDetail() {
     const status = editStatus ?? shipment.status;
     if (status && status !== shipment.status) payload.status = status;
 
-    const etaLocal = editEta ?? formatToLocalDateTime(shipment.eta);
-    const originalEta = formatToLocalDateTime(shipment.eta);
-    if (etaLocal !== originalEta) payload.eta = etaLocal ? new Date(etaLocal).toISOString() : null;
+    const etaLocal = editEta ?? formatToLocalDateTime(shipment.eta)
+    const originalEta = formatToLocalDateTime(shipment.eta)
+    if (etaLocal !== originalEta) payload.eta = etaLocal ? new Date(etaLocal).toISOString() : null
 
-    if (!Object.keys(payload).length) return alert('No changes to update');
+    // Consignee Updates
+    const currentConsignee: { name?: string; contact?: string } = shipment.consignee || {}
+    const newConsignee: { name?: string; contact?: string } = { ...currentConsignee }
+    let consigneeChanged = false
+
+    if (editConsigneeName !== null && editConsigneeName !== currentConsignee.name) {
+      newConsignee.name = editConsigneeName
+      consigneeChanged = true
+    }
+
+    if (editConsigneeContact !== null && editConsigneeContact !== currentConsignee.contact) {
+      newConsignee.contact = editConsigneeContact
+      consigneeChanged = true
+    }
+
+    // Always enforce +91 if contact exists (fixing legacy data or user input)
+    if (newConsignee.contact && !newConsignee.contact.startsWith('+91')) {
+      newConsignee.contact = `+91${newConsignee.contact}`
+      // If we are fixing legacy data, we must include it in payload even if user didn't edit it explicitly
+      if (currentConsignee.contact) consigneeChanged = true
+    }
+
+    if (consigneeChanged) {
+      payload.consignee = newConsignee
+    }
+
+    if (!Object.keys(payload).length) return alert('No changes to update')
 
     try {
-      await shipmentApi.update(id, payload);
-      await shipmentData.refetch();
-      alert('Shipment updated');
+      await api.patch(`/shipments/${id}`, payload)
+      await shipmentData.refetch()
+      toast.success('Shipment updated')
+      setIsConsigneeModalOpen(false)
+      setIsManageModalOpen(false)
     } catch (error) {
-      const apiError = handleApiError(error);
-      alert(`Failed to update shipment: ${apiError.message}`);
+      const apiError = handleApiError(error)
+      toast.error(`Failed to update shipment: ${apiError.message}`)
     }
   }
 
@@ -455,6 +486,52 @@ export default function ShipmentDetail() {
         }}
       />
 
+      <Modal
+        isOpen={isConsigneeModalOpen}
+        onClose={() => setIsConsigneeModalOpen(false)}
+        title="Update Consignee Details"
+      >
+        <div className="space-y-4 py-4">
+          <p className="text-xs text-slate-500 font-medium">
+            Modify the destination contact person details. This will update the delivery notification receiver.
+          </p>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Consignee Name</label>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={editConsigneeName ?? ''}
+              onChange={(e) => setEditConsigneeName(e.target.value)}
+              className="input-glass w-full"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mobile Number</label>
+            <input
+              type="text"
+              placeholder="10-digit mobile"
+              value={editConsigneeContact ?? ''}
+              onChange={(e) => setEditConsigneeContact(e.target.value)}
+              className="input-glass w-full"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={updateShipment}
+              className="btn-primary flex-1 py-3 shadow-lg shadow-blue-500/20"
+            >
+              Update Consignee
+            </button>
+            <button
+              onClick={() => setIsConsigneeModalOpen(false)}
+              className="px-6 py-3 rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Premium Role-Specific Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-5">
@@ -638,8 +715,8 @@ export default function ShipmentDetail() {
 
         {/* Right Column: Journey Paperwork Center & Driver Info */}
         <div className="space-y-6">
-          {/* Customer & Consignor Information (Manager View) */}
-          {isManagerPortal && (
+          {/* Customer & Consignor Information */}
+          {(isManagerPortal || user?.role === 'CUSTOMER') && (
             <div className="glass-card bg-white dark:bg-slate-900 border-none p-6 shadow-xl space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
@@ -677,10 +754,24 @@ export default function ShipmentDetail() {
               </div>
 
               {/* Consignee */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 relative group/consignee">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Consignee / Receiver</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">Recipient</span>
+                  <div className="flex items-center gap-2">
+                    {user?.role === 'CUSTOMER' && ['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT'].includes(shipment.status) && (
+                      <button
+                        onClick={() => {
+                          setEditConsigneeName(shipment.consignee?.name || '');
+                          setEditConsigneeContact(shipment.consignee?.contact || '');
+                          setIsConsigneeModalOpen(true);
+                        }}
+                        className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded-lg transition-all"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">Recipient</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">

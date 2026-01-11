@@ -1,56 +1,101 @@
-# Next-Gen Logistics Platform (Hackathon MVP)
-Monorepo with:
-- `frontend/`: React (Vite) + Tailwind + Leaflet map + Socket.IO client
-- `backend/`: Express (ESM) + MongoDB (Atlas/local via Mongoose) + Socket.IO + JWT auth
+# JSHS Logistics Platform
 
-## Features implemented (demo-ready)
-- Role-based auth: MANAGER / DRIVER / CUSTOMER
-- Shipment management: create/list/detail, assign (API), dispatch, deliver
-- Real-time shipment tracking: driver sends location pings via Socket.IO, manager/customer see live updates on map
-- Documents: upload POD (and other doc types), manager verification
-- Payments: invoices list + mock settlement gated by verified POD
-- Escrow & disputes (winning factor): customer can pre-fund escrow; manager verifies POD; escrow auto-releases; customer can raise dispute and manager can resolve (release/refund)
-- Realtime split payouts (winning factor): when invoice becomes PAID, system instantly pays driver + logistics org (mock) and pushes realtime updates
-- Analytics: basic KPI dashboard
-- Notifications: assignment/dispatch/delivery notifications + realtime push
+## Overview
+JSHS Logistics is a state-of-the-art, AI-powered logistics management platform designed to streamline shipment operations for Managers, Drivers, and Customers. It features real-time tracking, AI-driven categorization, automated document generation, and a seamless onboarding process for fleet assets.
 
-## Setup
-### 1) Backend env
-Copy and edit:
-- `backend/.env.example` → `backend/.env`
+## Key Features
 
-Set `MONGODB_URI` to MongoDB Atlas connection string (recommended).
+### 🚛 **Fleet Management**
+- **Vehicle Onboarding**: comprehensive forms to onboard various vehicle types (Trucks, Vans, Bikes) with detailed specifications.
+- **Driver Onboarding**: Full driver profile management including license validation, experience, and performance tracking.
+- **Asset Health Monitoring**: Integration with vehicle health APIs to monitor fleet conditions.
 
-Note: if `MONGODB_URI` is not set, backend falls back to local `mongodb://127.0.0.1:27017/nextgen_logistics`.
+### 📦 **Shipment Operations**
+- **Smart Shipment Creation**: 
+  - **AI Categorization**: Upload goods images and let our AI automatically categorize them (e.g., Kirana, Pharma, Electronics).
+  - **Auto-Pricing**: Real-time cost estimation based on distance, weight, and delivery type.
+- **Consignee Updates**: On-demand ability for customers update recipient details (Name/Contact) even after shipment creation.
+- **Lifecycle Management**: End-to-end status tracking from `CREATED` to `DELIVERED` with audit trails.
 
-### 2) Install
-From repo root:
-- `npm install`
+### 📍 **Real-Time Tracking & IoT**
+- **Live Location**: Interactive maps showing real-time vehicle location.
+- **Predictive ETA**: AI-powered ETA calculations considering traffic and weather.
+- **IoT Integration**: Monitoring of critical parameters like temperature and humidity for sensitive cargo.
 
-### 3) Seed demo data
-- `npm run db:seed`
+### 📄 **Automated Documentation**
+- **Auto-Generated Documents**: Instantly generate Manifests, Invoices, and Proof of Delivery (POD) in PDF format.
+- **Digital Signatures**: E-sign capabilities for Drivers and Consignees.
+- **Secure Access**: Role-based access control for sensitive documents.
 
-Seed creates demo users:
-- `manager@test.com` / `password123`
-- `driver@test.com` / `password123`
-- `customer@test.com` / `password123`
+### 💳 **Financials**
+- **Razorpay Integration**: Seamless payment processing for shipments (Pay Now / Pay Later).
+- **Driver Payouts**: Automated calculation of driver earnings and payout status tracking.
 
-### 4) Run dev servers
-- `npm run dev`
+## Technology Stack
+- **Frontend**: React, TypeScript, Tailwind CSS, Leaflet Maps, Framer Motion.
+- **Backend**: Node.js, Express, MongoDB, Mongoose.
+- **Services**: Razorpay (Payments), Gemini AI (Categorization), PDFKit (Documents).
 
-Frontend: http://localhost:5173
-Backend: http://localhost:4000
+## Getting Started
 
-## Demo flow (recommended)
-1. Login as **manager@test.com**
-2. Go to Shipments → open a shipment → keep the map open
-3. In a second browser/tab (or incognito), login as **driver@test.com**
-4. Go to Driver Mode → Start Tracking
-5. Switch back to Manager shipment map: you should see the marker move in realtime
-6. Driver: Shipment → Mark Delivered
-7. Customer/Driver: upload POD from Shipment Detail
-8. Manager: Shipment Detail → verify POD under "Shipment documents"
-9. Payments: open invoice → Pay (mock)
+### Prerequisites
+- Node.js (v18+)
+- MongoDB (Local or Atlas)
+- NPM or Yarn
 
+### Installation
 
-<!-- hellodosto -->
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-repo/jshs-logistics.git
+   cd jshs-logistics
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   # Root directory (if workspaces are configured) or individually:
+   cd frontend && npm install
+   cd ../backend && npm install
+   ```
+
+3. **Environment Setup**
+   - Create `.env` in `backend/`:
+     ```env
+     PORT=4000
+     MONGO_URI=mongodb://localhost:27017/bharti
+     JWT_SECRET=your_jwt_secret
+     RAZORPAY_KEY_ID=your_key
+     RAZORPAY_KEY_SECRET=your_secret
+     ...
+     ```
+   - Create `.env` in `frontend/`:
+     ```env
+     VITE_API_URL=http://localhost:4000/api
+     VITE_RAZORPAY_KEY_ID=your_key
+     ...
+     ```
+
+4. **Run the Application**
+   ```bash
+   # In backend directory
+   npm run dev
+   
+   # In frontend directory
+   npm run dev
+   ```
+
+## User Roles & Access
+
+- **Manager**: Full administrative access to Fleet, Shipments, Analytics, and Financials.
+- **Driver**: Access to assigned shipments, route navigation, and proof of upload.
+- **Customer**: Create shipments, track active orders, update consignee details, and view invoices.
+
+## Contributing
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+---
+**Hacknova 26 - Team JSHS**
