@@ -32,9 +32,21 @@ JSHS Logistics is a state-of-the-art, AI-powered logistics management platform d
 - **Driver Payouts**: Automated calculation of driver earnings and payout status tracking.
 
 ## Technology Stack
-- **Frontend**: React, TypeScript, Tailwind CSS, Leaflet Maps, Framer Motion.
-- **Backend**: Node.js, Express, MongoDB, Mongoose.
-- **Services**: Razorpay (Payments), Gemini AI (Categorization), PDFKit (Documents).
+- **Frontend**: React, TypeScript, Tailwind CSS, Leaflet Maps, Framer Motion, Vercel (Deployment).
+- **Backend**: Node.js, Express, MongoDB, Mongoose, Render (Deployment).
+- **Services**: Razorpay (Payments), Gemini AI (Categorization), PDFKit (Documents), Vapi AI (Voice Assistant).
+
+## Deployment Information
+
+### Frontend Deployment
+The frontend is deployed on Vercel and accessible at:
+**[https://www.jshslogistics.vercel.app](https://www.jshslogistics.vercel.app)**
+
+
+### Accessing the Application
+- **Customer Portal**: `https://www.jshslogistics.vercel.app/`
+- **Manager Portal**: `https://www.jshslogistics.vercel.app/login?role=manager`
+- **Driver Portal**: `https://www.jshslogistics.vercel.app/login?role=driver`
 
 ## Getting Started
 
@@ -66,16 +78,20 @@ JSHS Logistics is a state-of-the-art, AI-powered logistics management platform d
      JWT_SECRET=your_jwt_secret
      RAZORPAY_KEY_ID=your_key
      RAZORPAY_KEY_SECRET=your_secret
+     VAPI_API_KEY=your_vapi_key
+     VAPI_ASSISTANT_ID=your_vapi_assistant_id
      ...
      ```
    - Create `.env` in `frontend/`:
      ```env
      VITE_API_URL=http://localhost:4000/api
      VITE_RAZORPAY_KEY_ID=your_key
+     VITE_VAPI_API_KEY=your_vapi_key
+     VITE_VAPI_ASSISTANT_ID=your_vapi_assistant_id
      ...
      ```
 
-4. **Run the Application**
+4. **Run the Application Locally**
    ```bash
    # In backend directory
    npm run dev
@@ -87,8 +103,11 @@ JSHS Logistics is a state-of-the-art, AI-powered logistics management platform d
 ## User Roles & Access
 
 - **Manager**: Full administrative access to Fleet, Shipments, Analytics, and Financials.
+  - Access URL: `https://www.jshslogistics.vercel.app/login?role=manager`
 - **Driver**: Access to assigned shipments, route navigation, and proof of upload.
+  - Access URL: `https://www.jshslogistics.vercel.app/login?role=driver`
 - **Customer**: Create shipments, track active orders, update consignee details, and view invoices.
+  - Access URL: `https://www.jshslogistics.vercel.app/`
 
 ## Contributing
 1. Fork the repository.
