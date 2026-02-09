@@ -33,7 +33,11 @@ export function formatDistance(distanceKm: number | undefined): string {
 
 // Function to get base API URL
 export function getBaseApiUrl(): string {
-  return import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4000';
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    return apiUrl.replace('/api', '');
+  }
+  return import.meta.env.PROD ? 'https://your-backend-domain.onrender.com' : 'http://localhost:4000';
 }
 
 // Function to build document URL

@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: jshs-logistics-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SPEED_LIMIT_KMPH
+        value: 80
+      - key: HARSH_TURN_DEG
+        value: 45
+      - key: HARSH_TURN_WINDOW_SEC
+        value: 2
+      - key: IDLE_WINDOW_SEC
+        value: 300
+      - key: DRIVER_EVENT_COOLDOWN_SEC
+        value: 60

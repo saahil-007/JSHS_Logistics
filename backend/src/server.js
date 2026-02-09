@@ -23,6 +23,9 @@ const io = new Server(server, {
       if (origin === env.CORS_ORIGIN) return callback(null, origin)
       if (/^http:\/\/[a-z0-9-]+\.localhost:5173$/.test(origin)) return callback(null, origin)
       if (origin.endsWith('.jshsl.app') || origin.endsWith('.jshs.app')) return callback(null, origin)
+      if (env.NODE_ENV === 'production' && (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com'))) {
+        return callback(null, origin)
+      }
       callback(new Error('Not allowed by CORS'))
     },
     credentials: true,
@@ -34,5 +37,5 @@ registerSocketHandlers(io)
 
 server.listen(env.PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`Backend listening on http://localhost:${env.PORT}`)
+  console.log(`Backend listening on port ${env.PORT}`)
 })

@@ -37,6 +37,11 @@ app.use(
         return callback(null, origin)
       }
 
+      // Allow Vercel and Render domains in production
+      if (env.NODE_ENV === 'production' && (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com'))) {
+        return callback(null, origin)
+      }
+
       // Fallback: If specific origin matches env
       if (origin === env.CORS_ORIGIN) return callback(null, true)
 
