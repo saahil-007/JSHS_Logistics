@@ -64,13 +64,13 @@ export default function Landing() {
                 </p>
                 <div className="mt-4 flex gap-2">
                   <Link
-                    to="/login?role=manager"
+                    to="/login?role=customer"
                     className="flex-1 rounded-lg bg-indigo-600 py-2 text-center text-xs font-medium text-white hover:bg-indigo-700"
                   >
                     Login
                   </Link>
                   <Link
-                    to="/register?role=manager"
+                    to="/register?role=customer"
                     className="flex-1 rounded-lg border border-indigo-200 py-2 text-center text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
                   >
                     Register

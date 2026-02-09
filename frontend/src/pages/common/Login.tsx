@@ -60,10 +60,19 @@ export default function Login() {
       // Small delay to ensure token is properly set in API interceptor
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      const from = (location.state as any)?.from?.pathname || 'dashboard'
-      // Ensure the 'from' path doesn't accidentally redirect to root if it's already within /app
-      const target = from.startsWith('/') ? from : `../app/${from}`
-      nav(target, { replace: true })
+      // Determine the correct dashboard path based on role
+      let dashboardPath = '/app/dashboard'
+      if (user.role === 'MANAGER') {
+        dashboardPath = '/manager/app/dashboard'
+      } else if (user.role === 'DRIVER') {
+        dashboardPath = '/driver/app/dashboard'
+      } else {
+        dashboardPath = '/app/dashboard'
+      }
+
+      const from = (location.state as any)?.from?.pathname || dashboardPath
+      // Ensure we redirect to the correct role-based path
+      nav(from, { replace: true })
     } catch (err: unknown) {
       // Ensure we log out if the login succeeded but role check failed
       logout()
