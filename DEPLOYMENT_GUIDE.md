@@ -119,11 +119,13 @@ This guide provides step-by-step instructions to deploy your JSHS Logistics appl
    ```
 
 3. **Set Environment Variables**:
+   In the Vercel dashboard, add these under **Settings > Environment Variables**:
    ```env
    VITE_API_URL=https://your-backend.onrender.com/api
    VITE_SOCKET_URL=https://your-backend.onrender.com
    VITE_BASE_DOMAIN=yourdomain.com
    ```
+   *(Enter the plain values without any `@` prefix or quotes)*
 
 4. **Deploy Frontend**:
    - Click "Deploy"

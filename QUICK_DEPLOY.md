@@ -70,6 +70,8 @@ RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 ```
 
 ### Frontend (Vercel)
+> **Note**: Enter these values directly in the Vercel Dashboard (Settings > Environment Variables). Do **NOT** use quotes or the `@` symbol.
+
 ```
 VITE_API_URL=https://your-backend.onrender.com/api
 VITE_SOCKET_URL=https://your-backend.onrender.com
