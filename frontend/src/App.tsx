@@ -47,176 +47,189 @@ export default function App() {
         <VapiWidget apiKey={vapiApiKey} assistantId={vapiAssistantId} />
       )}
       <Routes>
-        <Route
-          path="/"
-          element={isCustomer ? <Landing /> : <Navigate to="/app/dashboard" replace />}
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        {/* Managers cannot register; they must be seeded/created by admins */}
-        <Route
-          path="/register"
-          element={!isManager ? <Register /> : <Navigate to="/login" replace />}
-        />
-
-        <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="shipments" element={<Shipments />} />
-          <Route path="shipment/:id" element={<ShipmentDetail />} />
-
-          {/* Customer Specific */}
-          <Route
-            path="create-shipment"
-            element={
-              <ProtectedRoute roles={['CUSTOMER']}>
-                <CustomerCreateShipment />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="fleet"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <Fleet />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="fleet-performance"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <FleetPerformance />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="iot-monitor"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <IotMonitor />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="drivers"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <Drivers />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Onboarding */}
-          <Route
-            path="onboarding"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <OnboardingHub />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="onboarding/vehicle"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <VehicleOnboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="onboarding/driver"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <DriverOnboarding />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Manager Approvals & Documents */}
-          <Route
-            path="approvals"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <PendingApprovals />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="documents"
-            element={
-              <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
-                <Documents />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="documents/:category"
-            element={
-              <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
-                <Documents />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="payments" element={<Payments />} />
-
-          {/* Driver Earnings */}
-          <Route
-            path="earnings"
-            element={
-              <ProtectedRoute roles={['DRIVER']}>
-                <DriverEarnings />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="analytics"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="audit"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <AuditLogs />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="driver"
-            element={
-              <ProtectedRoute roles={['DRIVER']}>
-                <Driver />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="driver/:id"
-            element={
-              <ProtectedRoute roles={['MANAGER']}>
-                <DriverDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="profile" element={<Profile />} />
-          <Route path="notifications" element={<Notifications />} />
-        </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/manager/*" element={<AppRoutes type="MANAGER" />} />
+        <Route path="/driver/*" element={<AppRoutes type="DRIVER" />} />
+        <Route path="/*" element={<AppRoutes type="CUSTOMER" />} />
       </Routes>
     </>
+  )
+}
+
+function AppRoutes({ type }: { type: 'MANAGER' | 'DRIVER' | 'CUSTOMER' }) {
+  const isCustomer = type === 'CUSTOMER'
+  const isManager = type === 'MANAGER'
+  const isDriver = type === 'DRIVER'
+
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={isCustomer ? <Landing /> : <Navigate to="/app/dashboard" replace />}
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route
+        path="/register"
+        element={!isManager ? <Register /> : <Navigate to="/login" replace />}
+      />
+
+      <Route
+        path="/app"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="shipments" element={<Shipments />} />
+        <Route path="shipment/:id" element={<ShipmentDetail />} />
+
+        {/* Customer Specific */}
+        <Route
+          path="create-shipment"
+          element={
+            <ProtectedRoute roles={['CUSTOMER']}>
+              <CustomerCreateShipment />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="fleet"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <Fleet />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="fleet-performance"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <FleetPerformance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="iot-monitor"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <IotMonitor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="drivers"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <Drivers />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Onboarding */}
+        <Route
+          path="onboarding"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <OnboardingHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="onboarding/vehicle"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <VehicleOnboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="onboarding/driver"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <DriverOnboarding />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Manager Approvals & Documents */}
+        <Route
+          path="approvals"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <PendingApprovals />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="documents"
+          element={
+            <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
+              <Documents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="documents/:category"
+          element={
+            <ProtectedRoute roles={['MANAGER', 'DRIVER', 'CUSTOMER']}>
+              <Documents />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="payments" element={<Payments />} />
+
+        {/* Driver Earnings */}
+        <Route
+          path="earnings"
+          element={
+            <ProtectedRoute roles={['DRIVER']}>
+              <DriverEarnings />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="analytics"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <AuditLogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="driver"
+          element={
+            <ProtectedRoute roles={['DRIVER']}>
+              <Driver />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="driver/:id"
+          element={
+            <ProtectedRoute roles={['MANAGER']}>
+              <DriverDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="profile" element={<Profile />} />
+        <Route path="notifications" element={<Notifications />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
