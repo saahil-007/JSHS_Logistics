@@ -24,4 +24,10 @@ dist-ssr
 *.sw?
 
 .env
+.env.production
+/frontend/.env
+/backend/.env
+/frontend/.env.production
+/backend/.env.production
+
 .agent
