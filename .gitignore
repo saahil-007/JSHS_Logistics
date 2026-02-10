@@ -27,7 +27,7 @@ dist-ssr
 .env.production
 /frontend/.env
 /backend/.env
-/frontend/.env.production
-/backend/.env.production
+frontend/.env.production
+backend/.env.production
 
 .agent
