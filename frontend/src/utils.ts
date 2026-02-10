@@ -46,3 +46,32 @@ export function getStatusColor(status: string): string {
   
   return statusColors[status] || 'text-slate-600 dark:text-slate-300';
 }
+
+export const formatDate = (dateString?: string) => {
+  if (!dateString) return '';
+  try {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch (error) {
+    console.warn('Invalid date provided to formatDate:', dateString);
+    return 'Invalid Date';
+  }
+};
+
+export const formatCurrency = (amount?: number) => {
+  if (amount === undefined || amount === null) return '₹0';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+export const formatDistance = (distanceInKm?: number) => {
+  if (distanceInKm === undefined || distanceInKm === null) return '0 km';
+  return `${distanceInKm.toFixed(0)} km`;
+};
