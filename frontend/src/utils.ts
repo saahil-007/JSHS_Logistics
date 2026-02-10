@@ -1,43 +1,9 @@
-// Utility functions for the application
-
-// Function to format currency values
-export function formatCurrency(amount: number | undefined, currency: string = 'INR'): string {
-  if (amount === undefined || amount === null) return '—';
-  
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(amount);
-}
-
-// Function to format dates consistently
-export function formatDate(dateString: string | undefined): string {
-  if (!dateString) return '—';
-  
-  try {
-    return new Date(dateString).toLocaleString();
-  } catch (error) {
-    console.warn('Invalid date provided to formatDate:', dateString);
-    return 'Invalid Date';
-  }
-}
-
-// Function to format distance
-export function formatDistance(distanceKm: number | undefined): string {
-  if (distanceKm === undefined || distanceKm === null) return '—';
-  
-  return `${distanceKm.toFixed(1)} km`;
-}
-
-// Function to get base API URL
 export function getBaseApiUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL;
   if (apiUrl) {
     return apiUrl.replace('/api', '');
   }
-  return import.meta.env.PROD ? 'https://your-backend-domain.onrender.com' : 'http://localhost:4000';
+  return import.meta.env.PROD ? 'https://jshs-logistics.onrender.com' : 'http://localhost:4000';
 }
 
 // Function to build document URL
@@ -79,18 +45,4 @@ export function getStatusColor(status: string): string {
   };
   
   return statusColors[status] || 'text-slate-600 dark:text-slate-300';
-}
-
-// Function to calculate distance between two points (in km) using Haversine formula
-export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radius of the Earth in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const distance = R * c; // Distance in km
-  return distance;
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Menu, LogOut, User, Search, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../auth/AuthContext'
@@ -19,6 +19,8 @@ interface TopNavProps {
 export function TopNav({ onOpenMenu, onToggleSidebar, onMouseEnterSidebar, onMouseLeaveSidebar, isSidebarOpen }: TopNavProps) {
   const { user, logout } = useAuth()
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+  const location = useLocation()
+  const isLandingPage = location.pathname === '/'
 
   return (
     <motion.header
@@ -107,6 +109,15 @@ export function TopNav({ onOpenMenu, onToggleSidebar, onMouseEnterSidebar, onMou
           >
             <Search className="h-5 w-5" />
           </button>
+
+          {isLandingPage && !user && (
+            <Link
+              to="/login?role=manager"
+              className="hidden sm:inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-slate-500/20 hover:opacity-90 transition-opacity"
+            >
+              Manager Login
+            </Link>
+          )}
 
           {user?.role === 'MANAGER' && (
             <div className="hidden lg:block">
