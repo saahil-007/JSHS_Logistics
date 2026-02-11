@@ -12,37 +12,44 @@ The system demonstrates enterprise-grade architecture with microservices pattern
 
 ```mermaid
 graph TB
-    subgraph "Frontend Ecosystem"
-        A[React 19 & TypeScript]
-        B[Vite Build Tool]
-        C[Tailwind CSS]
-        D[Framer Motion]
+    %% Class Definitions for High Contrast
+    classDef frontend fill:#2563eb,stroke:#1e3a8a,stroke-width:2px,color:#ffffff
+    classDef backend fill:#7c3aed,stroke:#4c1d95,stroke-width:2px,color:#ffffff
+    classDef database fill:#059669,stroke:#064e3b,stroke-width:2px,color:#ffffff
+    classDef external fill:#d97706,stroke:#78350f,stroke-width:2px,color:#ffffff
+    classDef security fill:#dc2626,stroke:#7f1d1d,stroke-width:2px,color:#ffffff
+
+    subgraph "Frontend Ecosystem (React 19)"
+        A[React & TypeScript]:::frontend
+        B[Vite Build Tool]:::frontend
+        C[Tailwind CSS]:::frontend
+        D[Framer Motion]:::frontend
     end
     
-    subgraph "Backend Infrastructure"
-        E[Express.js API]
-        F[Node.js Runtime]
-        G[Socket.io Server]
-        H[PDFKit Engine]
+    subgraph "Backend Infrastructure (Node.js)"
+        E[Express.js API]:::backend
+        F[Socket.io Server]:::backend
+        G[PDFKit Engine]:::backend
+        H[Multer Middleware]:::backend
     end
     
     subgraph "Cloud Data Layer"
-        I[(MongoDB Atlas)]
-        J[Mongoose ODM]
-        K[Redis Caching]
+        I[(MongoDB Atlas)]:::database
+        J[Mongoose ODM]:::database
+        K[Redis Caching]:::database
     end
     
     subgraph "External Integrations"
-        L[Google Gemini AI]
-        M[Razorpay Payments]
-        N[Twilio SMS]
-        O[Leaflet Maps]
+        L[Google Gemini AI]:::external
+        M[Razorpay Payments]:::external
+        N[Twilio SMS]:::external
+        O[Leaflet Maps]:::external
     end
     
-    subgraph "Security Layer"
-        P[JWT Auth]
-        Q[Helmet Security]
-        R[CORS Policy]
+    subgraph "Security & Auth"
+        P[JWT Authentication]:::security
+        Q[Helmet Security]:::security
+        R[CORS Management]:::security
     end
     
     A <--> E
@@ -50,16 +57,10 @@ graph TB
     E <--> L
     E <--> M
     E <--> N
-    E <--> G
-    G <--> O
+    E <--> F
+    F <--> O
     A --- P
     E --- P
-    
-    style A fill:#e1f5fe,stroke:#01579b
-    style E fill:#f3e5f5,stroke:#4a148c
-    style I fill:#e8f5e9,stroke:#1b5e20
-    style L fill:#fff3e0,stroke:#e65100
-    style P fill:#ffebee,stroke:#b71c1c
 ```
 
 ### 1.2 Technology Stack Analysis
@@ -96,6 +97,13 @@ graph TB
 ```mermaid
 stateDiagram-v2
     direction LR
+    
+    %% Style Definitions
+    classDef highlight fill:#2563eb,color:#fff,font-weight:bold
+    classDef success fill:#059669,color:#fff
+    classDef warning fill:#d97706,color:#fff
+    classDef danger fill:#dc2626,color:#fff
+
     [*] --> CREATED: Order Placed
     CREATED --> ASSIGNED: Vehicle Match
     ASSIGNED --> PICKED_UP: Cargo Scanned
@@ -106,17 +114,20 @@ stateDiagram-v2
     OUT_FOR_DELIVERY --> DELIVERED: POD Signed
     DELIVERED --> CLOSED: Payment Verified
     
-    state CREATED {
+    state CREATED :::highlight {
         direction TB
         AI_Categorization
         Pricing_Engine
     }
     
-    state IN_TRANSIT {
+    state IN_TRANSIT :::warning {
         direction TB
         GPS_Streaming
         IoT_Monitoring
     }
+
+    state DELIVERED :::success
+    state DELAYED :::danger
 ```
 
 ### 2.2 Order-to-Payment Flow
@@ -124,29 +135,39 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Customer
-    participant S as System (API)
+    
+    %% High Contrast Participants
+    participant C as Customer (Web)
+    participant S as Express API
     participant D as Driver App
     participant P as Razorpay
-    participant B as Billing (PDFKit)
+    participant B as PDF Engine
+
+    Note over C, B: Secure Communication via JWT & TLS 1.3
 
     C->>S: Create Shipment + Image
+    Note right of S: Gemini AI analysis
     S->>S: AI Goods Categorization
-    S-->>C: Quote & Confirmation
-    S->>D: Push Notification
+    S-->>C: Dynamic Quote
+    S->>D: Assignment Notification
     D->>S: Accept Assignment
     D->>S: Upload Pickup Proof
-    loop Real-time Tracking
-        D->>S: WebSocket GPS + IoT
-        S->>C: Live Map Updates
+    
+    rect rgb(240, 240, 240)
+        Note over C, D: Real-time Socket.io updates
+        loop Live Tracking
+            D->>S: GPS + IoT Data
+            S->>C: Live Map Movement
+        end
     end
+
     D->>S: Mark Delivered + POD
     S->>B: Generate GST Invoice
-    S->>C: Payment Link
-    C->>P: Pay via UPI/Card
-    P-->>S: Webhook: Success
+    S->>C: Payment Link Sent
+    C->>P: Secure Transaction
+    P-->>S: Webhook: success
     S->>B: Final Receipt
-    S->>C: Download Documents
+    S->>C: Download PDF Documents
 ```
 
 ### 2.3 Real-time Auto-Assignment Engine
@@ -330,17 +351,54 @@ graph LR
 - **External System Integration**: Support for third-party webhook consumption
 - **Event-Driven Architecture**: Pub/sub pattern for real-time updates
 
-## 8. Application Screenshots & Visual Features
+## 8. Technical Implementation Details
 
-### 8.1 Dashboard Interface
+### 8.1 Real-time Tracking Architecture
+The platform utilizes **Socket.io** for low-latency bidirectional communication between the driver app, backend server, and customer dashboard.
+
+- **Driver Side**: Emits `updateLocation` events every 5 seconds with GPS coordinates and IoT sensor data (temperature, humidity).
+- **Backend**: Validates the payload, updates the MongoDB document using `$set`, and broadcasts the `locationUpdated` event to a specific shipment "room".
+- **Customer Side**: Listens to the shipment room and updates the **Leaflet.js** map marker position with smooth CSS transitions.
+
+### 8.2 AI Goods Categorization Flow
+We integrated **Google Gemini 1.5 Flash** to automate the shipment categorization process.
+
+1. **Input**: Customer uploads an image of the goods.
+2. **Processing**: The image is sent to Gemini with a specialized prompt: *"Analyze this image and categorize the goods into one of: Kirana, Pharma, Electronics, Textile, or Other. Provide a brief description."*
+3. **Outcome**: The AI returns a JSON object which the system uses to:
+   - Apply category-specific pricing multipliers.
+   - Select the appropriate vehicle type (e.g., Pharma requires cold-chain vehicles).
+   - Generate specific compliance documents.
+
+### 8.3 Automated Document Pipeline
+Using **PDFKit**, the system generates legally compliant documents on-the-fly.
+
+- **GST Invoices**: Dynamically calculates CGST/SGST/IGST based on origin and destination states.
+- **POD (Proof of Delivery)**: Merges the driver's uploaded signature image and GPS timestamp into a final PDF.
+- **C2PA Integration**: Digital assets like signatures are timestamped and cryptographically linked to ensure provenance and prevent tampering.
+
+## 9. API Specifications (Selected Endpoints)
+
+| Method | Endpoint | Description | Auth |
+|:---|:---|:---|:---|
+| `POST` | `/api/auth/register` | User registration (Manager/Driver/Customer) | None |
+| `POST` | `/api/shipments` | Create new shipment with AI categorization | JWT |
+| `GET` | `/api/shipments/:id` | Get detailed shipment status and history | JWT |
+| `PATCH` | `/api/shipments/:id/status` | Update shipment status (Driver only) | JWT |
+| `GET` | `/api/fleet/vehicles` | List all available vehicles and status | JWT |
+| `POST` | `/api/payments/create-order` | Initialize Razorpay payment session | JWT |
+
+## 10. Application Screenshots & Visual Features
+
+### 10.1 Dashboard Interface
 
 **Manager Dashboard Overview**
 
-![Manager Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/manager_dashboard.png)
+![Manager Dashboard](./screenshots/manager_dashboard.png)
 
 **Operational Analytics & KPIs**
 
-![Operational Analytics](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/analytics.png)
+![Operational Analytics](./screenshots/analytics.png)
 
 **Dashboard Features:**
 - **Fleet Overview**: Real-time vehicle status monitoring with live metrics
@@ -349,11 +407,14 @@ graph LR
 - **Interactive Maps**: Live vehicle positioning with Leaflet.js integration
 - **Quick Actions**: One-click access to shipment creation, driver management, and reporting
 
-### 8.2 Shipment Creation Interface
+### 10.2 Shipment Creation Interface
 
 **AI-Powered Shipment Creation**
 
-![Shipment Creation Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_shipment_booking.png)
+![Shipment Creation Interface](./screenshots/customer_shipment_booking.png)
+![Alternative View](./screenshots/customer_shipment_booking2.png)
+![Booking Form](./screenshots/customer_shipmment_booking.png)
+![Shipment Details](./screenshots/shipments.png)
 
 **Key Features:**
 - **AI Image Recognition**: Automatic goods categorization using Google Gemini
@@ -361,11 +422,12 @@ graph LR
 - **Multi-modal Input**: Text description, image upload, or voice input
 - **Real-time Validation**: Instant validation of addresses and availability
 
-### 8.3 Real-time Tracking Interface
+### 10.3 Real-time Tracking Interface
 
 **Live Shipment Tracking**
 
-![Live Tracking Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_shipment_tracking.png)
+![Live Tracking Interface](./screenshots/live_shipment_tracking.png)
+![Driver Side Tracking](./screenshots/driver_side_shipment_tracking.png)
 
 **Tracking Features:**
 - **Real-time GPS Updates**: 5-second interval location tracking with Leaflet.js maps
@@ -373,208 +435,226 @@ graph LR
 - **Route Visualization**: Interactive route lines with traffic-aware navigation
 - **IoT Integration**: Temperature, humidity, and door status monitoring
 
-### 8.4 Document Generation Interface
+### 10.4 Document Generation Interface
 
 **Automated Document Templates**
 
-![Document Center](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/documents_page.png)
+![Document Center](./screenshots/documents_page.png)
 
-![GST Invoice Sample](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/automated_gst_invoice.png)
+![GST Invoice Sample](./screenshots/automated_gst_invoice.png)
 
 **Document Features:**
 - **PDF Generation**: Server-side PDF creation using PDFKit
 - **Digital Signatures**: Manager e-signature and company seal integration
 - **Compliance**: GST-compliant formatting and legal requirements
 
-### 8.5 Fleet Management Dashboard
+### 10.5 Fleet Management Dashboard
 
 **Vehicle & Driver Management**
 
-![Vehicle Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/vehicle_management.png)
+![Vehicle Management](./screenshots/vehicle_management.png)
+![Driver Onboarding](./screenshots/driver_onboarding.png)
+![Vehicle Onboarding](./screenshots/vehicle_onboardsing.png)
 
 **Fleet Management Features:**
 - **Vehicle Status Tracking**: Real-time monitoring of vehicle location, health, and availability
 - **Driver Performance Analytics**: Rating system based on delivery performance and customer feedback
 - **Utilization Metrics**: Fleet efficiency tracking with utilization percentages
 
-### 8.6 IoT Monitoring Dashboard
+### 10.6 IoT Monitoring Dashboard
 
 **Sensor Data Visualization**
 
-![IoT Monitoring Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/iot_monitor.png)
+![IoT Monitoring Dashboard](./screenshots/iot_monitor.png)
 
 **IoT Monitoring Features:**
 - **Temperature & Humidity Monitoring**: Real-time environmental tracking for sensitive cargo
 - **Door Status**: Security monitoring with door open/close detection
 - **Alert System**: Automated notifications for threshold breaches
 
-### 8.7 Customer & Driver Experience
+### 10.7 Customer & Driver Experience
 
 **Customer Dashboard**
 
-![Customer Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_dashboard.png)
+![Customer Dashboard](./screenshots/customer_dashboard.png)
+![Customer Approvals](./screenshots/customer_approvals.png)
 
 **Driver Dashboard**
 
-![Driver Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/driver_dashboard.png)
+![Driver Dashboard](./screenshots/driver_dashboard.png)
+![Drive Mode](./screenshots/drive_mode.png)
+![Delivery Verification](./screenshots/deliver_verification.png)
+![Driver Guide](./screenshots/driver_guide.png)
 
 **Live Payments**
 
-![Live Payments](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_payments.png)
+![Live Payments](./screenshots/live_payments.png)
 
-## 9. Business Intelligence & Analytics
+## 11. Business Intelligence & Analytics
 
 ```mermaid
 mindmap
   root((Logistics Intelligence))
+    :::highlight
     Operational KPIs
+      :::success
       On-time Delivery
       Fleet Utilization
       Route Efficiency
       Turnaround Time
     Financial Metrics
+      :::warning
       Revenue/Shipment
       Driver Payouts
       Fuel Costs
       Collection Rate
     Customer Insights
+      :::highlight
       Satisfaction Score
       Repeat Booking Rate
       Growth Trends
     Predictive Analytics
+      :::danger
       Demand Forecasting
       Delay Risk
       Optimal Pricing
 ```
 
-### 9.1 Predictive Analytics
+<style>
+.mindmap-node.highlight { fill: #2563eb; color: white; }
+.mindmap-node.success { fill: #059669; color: white; }
+.mindmap-node.warning { fill: #d97706; color: white; }
+.mindmap-node.danger { fill: #dc2626; color: white; }
+</style>
+
+### 11.1 Predictive Analytics
 - **Demand Forecasting**: ML models for shipment volume prediction
 - **Delay Prediction**: Traffic and weather-based delay estimation
 - **Capacity Planning**: Optimal fleet size recommendations
 - **Route Optimization**: AI-driven route suggestions
 
-### 9.2 Reporting Capabilities
+### 11.2 Reporting Capabilities
 - **Automated Reports**: Scheduled report generation and delivery
 - **Custom Dashboards**: User-configurable dashboard layouts
 - **Export Options**: PDF, Excel, CSV export functionality
 - **Real-time Alerts**: Threshold-based notification system
 
-## 10. Deployment & DevOps
+## 12. Deployment & DevOps
 
-### 10.1 Infrastructure Setup
+### 12.1 Infrastructure Setup
 - **Frontend Deployment**: Vercel with GitHub integration
 - **Backend Deployment**: Render with environment-based configuration
 - **Database**: MongoDB Atlas with automated backups
 - **File Storage**: Cloud storage with CDN integration
 
-### 10.2 CI/CD Pipeline
+### 12.2 CI/CD Pipeline
 - **Automated Testing**: Unit and integration test automation
 - **Code Quality**: ESLint and TypeScript validation
 - **Deployment Automation**: One-click deployment processes
 - **Rollback Capabilities**: Version-based rollback system
 
-### 10.3 Monitoring & Maintenance
+### 12.3 Monitoring & Maintenance
 - **Health Checks**: Automated system health monitoring
 - **Error Tracking**: Comprehensive error logging and analysis
 - **Performance Monitoring**: Application performance monitoring tools
 - **Security Updates**: Automated security patch management
 
-## 11. Future Roadmap & Enhancements
+## 13. Future Roadmap & Enhancements
 
-### 11.1 Planned Features
+### 13.1 Planned Features
 - **Mobile Application**: Native React Native apps for iOS and Android
 - **Advanced Route Optimization**: Multi-stop delivery optimization
 - **Machine Learning Enhancement**: Improved AI models for categorization
 - **Blockchain Integration**: Immutable shipment tracking records
 
-### 11.2 Scalability Improvements
+### 13.2 Scalability Improvements
 - **Microservices Migration**: Decomposition into independent services
 - **Event Sourcing**: Implementation of event-driven architecture
 - **Container Orchestration**: Kubernetes deployment for scalability
 - **Edge Computing**: CDN integration for faster content delivery
 
-### 11.3 Business Expansion
+### 13.3 Business Expansion
 - **Multi-language Support**: Internationalization for global markets
 - **White-label Solutions**: Customizable branding for enterprise clients
 - **API Marketplace**: Public API for third-party integrations
 - **Partnership Integrations**: Integration with major e-commerce platforms
 
-## 12. Technical Challenges & Solutions
+## 14. Technical Challenges & Solutions
 
-### 12.1 Data Validation & Legacy Compatibility
+### 14.1 Data Validation & Legacy Compatibility
 **Challenge**: Strict backend validation for phone numbers (`+91` prefix) caused failures when updating legacy records.
 
 **Solution**: Implemented intelligent payload construction in the frontend that auto-detects unformatted numbers and silently prepends the country code before API transmission.
 
-### 12.2 Role-Based Access Control Complexity
+### 14.2 Role-Based Access Control Complexity
 **Challenge**: Complex visibility rules were causing "Forbidden" errors for legitimate users accessing their own data.
 
 **Solution**: Refined middleware and controller logic to correctly handle populated Mongoose documents vs. raw IDs, ensuring users always see data they're entitled to.
 
-### 12.3 Real-time Data Synchronization
+### 14.3 Real-time Data Synchronization
 **Challenge**: Maintaining real-time consistency between multiple concurrent users and IoT devices.
 
 **Solution**: Implemented Socket.io with room-based architecture and optimistic UI updates with rollback capabilities.
 
-## 13. Business Value Proposition
+## 15. Business Value Proposition
 
-### 13.1 Operational Efficiency
+### 15.1 Operational Efficiency
 - **30% Reduction** in manual assignment time through AI-powered auto-assignment
 - **25% Improvement** in fleet utilization through predictive analytics
 - **40% Decrease** in paperwork through automated document generation
 - **50% Faster** shipment booking through AI categorization
 
-### 13.2 Customer Experience
+### 15.2 Customer Experience
 - **Real-time Visibility**: Complete transparency in shipment status
 - **Flexible Operations**: On-demand consignee updates and modifications
 - **Multiple Payment Options**: Pay now or pay later flexibility
 - **Proactive Communication**: Automated notifications for delays and updates
 
-### 13.3 Driver Satisfaction
+### 15.3 Driver Satisfaction
 - **Fair Assignment**: Algorithm-based fair distribution of shipments
 - **Transparent Earnings**: Real-time earnings calculation and history
 - **Easy Documentation**: Simplified POD upload and document management
 - **Performance Recognition**: Rating-based recognition and incentives
 
-### 13.4 Financial Benefits
+### 15.4 Financial Benefits
 - **Reduced Operational Costs**: Automation reduces manual intervention
 - **Improved Cash Flow**: Faster payment collection and automated invoicing
 - **Better Resource Utilization**: Optimal fleet and driver allocation
 - **Scalable Growth**: Platform architecture supports business expansion
 
-## 14. Visual Gallery - Comprehensive Asset Overview
+## 16. Visual Gallery - Comprehensive Asset Overview
 
 <div align="center">
 
 ### Platform Core Interfaces
 
-| ![Manager Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/manager_dashboard.png) | ![Driver Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/driver_dashboard.png) |
+| ![Manager Dashboard](./screenshots/manager_dashboard.png) | ![Driver Dashboard](./screenshots/driver_dashboard.png) |
 |:---:|:---:|
 | *Manager Control Center* | *Driver Operations Hub* |
 
-| ![Customer Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_dashboard.png) | ![Live Tracking](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_shipment_tracking.png) |
+| ![Customer Dashboard](./screenshots/customer_dashboard.png) | ![Live Tracking](./screenshots/live_shipment_tracking.png) |
 |:---:|:---:|
 | *Customer Portal* | *Real-time GPS Tracking* |
 
 ### Specialized Modules
 
-| ![IoT Monitor](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/iot_monitor.png) | ![Analytics](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/analytics.png) |
+| ![IoT Monitor](./screenshots/iot_monitor.png) | ![Analytics](./screenshots/analytics.png) |
 |:---:|:---:|
 | *IoT Environmental Monitoring* | *Advanced Business Intelligence* |
 
-| ![Shipment Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/shipments.png) | ![Vehicle Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/vehicle_management.png) |
+| ![Shipment Management](./screenshots/shipments.png) | ![Vehicle Management](./screenshots/vehicle_management.png) |
 |:---:|:---:|
 | *Shipment Lifecycle Tracking* | *Fleet & Asset Management* |
 
 ### Document & Payment Automation
 
-| ![GST Invoice](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/automated_gst_invoice.png) | ![Live Payments](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_payments.png) |
+| ![GST Invoice](./screenshots/automated_gst_invoice.png) | ![Live Payments](./screenshots/live_payments.png) |
 |:---:|:---:|
 | *Automated GST Billing* | *Secure Payment Integration* |
 
 </div>
 
-## 15. Conclusion
+## 17. Conclusion
 
 JSHS Logistics stands as a testament to modern logistics platform development, successfully integrating cutting-edge technologies with practical business requirements. The platform demonstrates excellence in:
 
