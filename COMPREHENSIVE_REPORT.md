@@ -12,59 +12,54 @@ The system demonstrates enterprise-grade architecture with microservices pattern
 
 ```mermaid
 graph TB
-    subgraph "Frontend Layer"
-        A[React TypeScript App]
-        B[Vercel Deployment]
-        C[Role-Based Routing]
+    subgraph "Frontend Ecosystem"
+        A[React 19 & TypeScript]
+        B[Vite Build Tool]
+        C[Tailwind CSS]
+        D[Framer Motion]
     end
     
-    subgraph "API Gateway"
-        D[Express.js Server]
-        E[Helmet Security]
-        F[CORS Configuration]
-        G[Rate Limiting]
+    subgraph "Backend Infrastructure"
+        E[Express.js API]
+        F[Node.js Runtime]
+        G[Socket.io Server]
+        H[PDFKit Engine]
     end
     
-    subgraph "Business Logic Layer"
-        H[Controllers Layer]
-        I[Services Layer]
-        J[Middleware Layer]
-        K[RBAC System]
+    subgraph "Cloud Data Layer"
+        I[(MongoDB Atlas)]
+        J[Mongoose ODM]
+        K[Redis Caching]
     end
     
-    subgraph "Data Layer"
-        L[MongoDB Atlas]
-        M[Mongoose ODM]
-        N[Redis Cache]
+    subgraph "External Integrations"
+        L[Google Gemini AI]
+        M[Razorpay Payments]
+        N[Twilio SMS]
+        O[Leaflet Maps]
     end
     
-    subgraph "External Services"
-        O[Razorpay Payments]
-        P[Google Gemini AI]
-        Q[Twilio SMS]
-        R[Email Service]
-        S[Weather APIs]
+    subgraph "Security Layer"
+        P[JWT Auth]
+        Q[Helmet Security]
+        R[CORS Policy]
     end
     
-    subgraph "Real-time Layer"
-        T[Socket.io]
-        U[Live Tracking]
-        V[Notifications]
-    end
+    A <--> E
+    E <--> I
+    E <--> L
+    E <--> M
+    E <--> N
+    E <--> G
+    G <--> O
+    A --- P
+    E --- P
     
-    A --> D
-    C --> K
-    D --> H
-    H --> I
-    I --> L
-    I --> O
-    I --> P
-    I --> Q
-    I --> R
-    I --> S
-    T --> U
-    T --> V
-    A --> T
+    style A fill:#e1f5fe,stroke:#01579b
+    style E fill:#f3e5f5,stroke:#4a148c
+    style I fill:#e8f5e9,stroke:#1b5e20
+    style L fill:#fff3e0,stroke:#e65100
+    style P fill:#ffebee,stroke:#b71c1c
 ```
 
 ### 1.2 Technology Stack Analysis
@@ -100,86 +95,77 @@ graph TB
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CREATED
-    CREATED --> ASSIGNED: Assign Vehicle/Driver
-    ASSIGNED --> PICKED_UP: Driver Collects Cargo
-    PICKED_UP --> IN_TRANSIT: Driver En Route
-    IN_TRANSIT --> DELAYED: GPS/Traffic Exception
-    DELAYED --> IN_TRANSIT: Issue Resolved
-    IN_TRANSIT --> OUT_FOR_DELIVERY: Near Destination
-    OUT_FOR_DELIVERY --> DELIVERED: Proof of Delivery Uploaded
-    DELIVERED --> CLOSED: Payment Settled
-    CREATED --> CANCELLED: User Cancels
-    ASSIGNED --> CANCELLED
+    direction LR
+    [*] --> CREATED: Order Placed
+    CREATED --> ASSIGNED: Vehicle Match
+    ASSIGNED --> PICKED_UP: Cargo Scanned
+    PICKED_UP --> IN_TRANSIT: Journey Start
+    IN_TRANSIT --> DELAYED: Exception Alert
+    DELAYED --> IN_TRANSIT: Resolved
+    IN_TRANSIT --> OUT_FOR_DELIVERY: Hub Arrival
+    OUT_FOR_DELIVERY --> DELIVERED: POD Signed
+    DELIVERED --> CLOSED: Payment Verified
     
-    note right of CREATED
-        AI Categorization
-        Auto-Pricing
-        Document Generation
-    end note
+    state CREATED {
+        direction TB
+        AI_Categorization
+        Pricing_Engine
+    }
     
-    note left of IN_TRANSIT
-        Real-time GPS
-        IoT Monitoring
-        Predictive ETA
-    end note
+    state IN_TRANSIT {
+        direction TB
+        GPS_Streaming
+        IoT_Monitoring
+    }
 ```
 
 ### 2.2 Order-to-Payment Flow
 
 ```mermaid
 sequenceDiagram
-    participant Customer
-    participant System
-    participant Driver
-    participant Billing
-    participant Bank
+    autonumber
+    participant C as Customer
+    participant S as System (API)
+    participant D as Driver App
+    participant P as Razorpay
+    participant B as Billing (PDFKit)
 
-    Customer->>System: Create Shipment (with Pricing)
-    System-->>Customer: Shipment ID (Status: CREATED)
-    System->>Driver: Assign Shipment
-    Driver->>System: Accept & Pick Up (Status: PICKED_UP)
-    
-    loop Tracking
-        System->>System: GPS Updates
-        opt Delay Detected
-           System->>Customer: Send Notification
-        end
+    C->>S: Create Shipment + Image
+    S->>S: AI Goods Categorization
+    S-->>C: Quote & Confirmation
+    S->>D: Push Notification
+    D->>S: Accept Assignment
+    D->>S: Upload Pickup Proof
+    loop Real-time Tracking
+        D->>S: WebSocket GPS + IoT
+        S->>C: Live Map Updates
     end
-
-    Driver->>System: Mark Delivered (Upload POD)
-    System->>Billing: Trigger Invoice Generation
-    Billing->>System: Invoice Created (Status: PENDING)
-    
-    System->>Customer: Request Payment
-    Customer->>Bank: Pay Invoice
-    Bank-->>System: Webhook (Payment Success)
-    System->>Billing: Mark Paid
-    System->>System: Close Shipment (Status: CLOSED)
-    
-    note over System: Automated Document Generation
-    note over Billing: GST Invoice, CMR Note, Manifest
+    D->>S: Mark Delivered + POD
+    S->>B: Generate GST Invoice
+    S->>C: Payment Link
+    C->>P: Pay via UPI/Card
+    P-->>S: Webhook: Success
+    S->>B: Final Receipt
+    S->>C: Download Documents
 ```
 
 ### 2.3 Real-time Auto-Assignment Engine
 
 ```mermaid
 flowchart TD
-    A[New Shipment Created] --> B{Manager Assign?}
-    B -- Yes --> C[Manual Selection]
-    B -- No --> D[Auto-Assign Engine]
-    D --> E[Search Nearby Drivers (Radius 10km)]
-    E --> F[Filter: Vehicle Type & Capacity]
-    F --> G[Sort by: Rating & Utilization]
-    G --> H{Found Candidate?}
-    H -- Yes --> I[Send Request to Driver]
-    I --> J{Driver Accept?}
-    J -- Yes --> K[Assign & Notify Customer]
-    J -- No --> L[Try Next Candidate]
-    H -- No --> M[Alert Manager (Manual Intervention)]
-    
-    style D fill:#f9f,stroke:#333,stroke-width:4px
-    style K fill:#9f9,stroke:#333,stroke-width:2px
+    Start([New Shipment]) --> AI{AI Ready?}
+    AI -- Yes --> Geo[Geo-spatial Search]
+    Geo --> Rad[Radius Check: 10km]
+    Rad --> Filter[Filter: Vehicle Type]
+    Filter --> Match{Candidates?}
+    Match -- Yes --> Rank[Rank by Rating/Load]
+    Rank --> Dispatch[Dispatch Request]
+    Dispatch --> Accept{Accept?}
+    Accept -- Yes --> Done([Assign Driver])
+    Accept -- No --> Next[Next Candidate]
+    Next --> Dispatch
+    Match -- No --> Escalation[Alert Manager]
+    Escalation --> Manual[Manual Override]
 ```
 
 ## 3. Key Features & Capabilities
@@ -350,7 +336,11 @@ graph LR
 
 **Manager Dashboard Overview**
 
-![JSHS Logistics Logo](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/frontend/public/logo.png)
+![Manager Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/manager_dashboard.png)
+
+**Operational Analytics & KPIs**
+
+![Operational Analytics](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/analytics.png)
 
 **Dashboard Features:**
 - **Fleet Overview**: Real-time vehicle status monitoring with live metrics
@@ -359,339 +349,232 @@ graph LR
 - **Interactive Maps**: Live vehicle positioning with Leaflet.js integration
 - **Quick Actions**: One-click access to shipment creation, driver management, and reporting
 
-*Note: The actual dashboard interface includes interactive charts, real-time maps, and dynamic data visualization powered by Chart.js and Leaflet.js*
-
 ### 8.2 Shipment Creation Interface
 
 **AI-Powered Shipment Creation**
 
-![Shipment Creation Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/uploads/1767705272359_WIN_20251111_19_25_51_Pro.jpg)
+![Shipment Creation Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_shipment_booking.png)
 
 **Key Features:**
 - **AI Image Recognition**: Automatic goods categorization using Google Gemini
 - **Smart Pricing**: Dynamic pricing based on distance, weight, and category
 - **Multi-modal Input**: Text description, image upload, or voice input
 - **Real-time Validation**: Instant validation of addresses and availability
-- **Insurance Integration**: Automatic insurance calculation based on goods value
-
-*The interface includes intelligent form validation, predictive text for addresses, and real-time price calculations*
 
 ### 8.3 Real-time Tracking Interface
 
 **Live Shipment Tracking**
 
-![Live Tracking Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/uploads/1767705441944_WIN_20251111_19_25_51_Pro.jpg)
+![Live Tracking Interface](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_shipment_tracking.png)
 
 **Tracking Features:**
 - **Real-time GPS Updates**: 5-second interval location tracking with Leaflet.js maps
 - **Predictive ETA**: Machine learning-powered arrival time predictions
 - **Route Visualization**: Interactive route lines with traffic-aware navigation
-- **Driver Communication**: In-app messaging and status updates
-- **Geofencing Alerts**: Automatic notifications for zone entry/exit
 - **IoT Integration**: Temperature, humidity, and door status monitoring
-
-*The tracking system provides customers, managers, and drivers with role-specific views and real-time notifications*
-│ │ Driver: Rajesh Kumar [★ 4.8]                                           ││
-│ │ Vehicle: MH-12-AB-1234 [Tempo Traveller]                               ││
-│ │ Speed: 65 km/h  Temperature: 24°C                                      ││
-│ │ Distance Covered: 95/150 km                                            ││
-│ │ Estimated Arrival: 2:30 PM (45 mins)                                 ││
-│ └─────────────────────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 🔔 NOTIFICATIONS                                                          │
-│ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ 14:15 - Vehicle crossed toll plaza                                       ││
-│ │ 13:45 - Driver took 15-min break                                       ││
-│ │ 12:30 - Entered Express Highway                                         ││
-│ │ 11:00 - Package picked up successfully                                  ││
-│ └─────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ### 8.4 Document Generation Interface
 
-![Document Templates](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/src/assets/manager_esign.png)
-
 **Automated Document Templates**
 
-**Automated Document Types:**
-- **GST Invoices**: Tax-compliant invoices with automatic GST calculations
-- **Dispatch Manifests**: Detailed shipment manifests for logistics coordination
-- **CMR Consignment Notes**: International road transport documents
-- **Proof of Delivery**: Digital POD with e-signatures and photo verification
-- **Booking Confirmations**: Automated booking confirmations with QR codes
+![Document Center](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/documents_page.png)
+
+![GST Invoice Sample](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/automated_gst_invoice.png)
 
 **Document Features:**
 - **PDF Generation**: Server-side PDF creation using PDFKit
 - **Digital Signatures**: Manager e-signature and company seal integration
-- **Template Management**: Customizable templates for different document types
-- **Email Integration**: Automatic document delivery to stakeholders
 - **Compliance**: GST-compliant formatting and legal requirements
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ DOCUMENT CENTER - GENERATE & DOWNLOAD                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 📄 AVAILABLE DOCUMENTS                                                    │
-│ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ 📋 GST Invoice          ✅ Generated  [Download PDF] [View] [Regenerate]│ │
-│ │ 📦 Dispatch Manifest    ✅ Generated  [Download PDF] [View] [Regenerate]│ │
-│ │ 📗 CMR Consignment Note ✅ Generated  [Download PDF] [View] [Regenerate]│ │
-│ │ 📄 Proof of Delivery    ⏳ Pending    [Upload POD]                       │ │
-│ │ 📑 Booking Confirmation ✅ Generated  [Download PDF] [View] [Email]      │ │
-│ └─────────────────────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 📊 DOCUMENT PREVIEW                                                       │
-│ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ ┌─────────────────────────────────────────────────────────────────────┐   │ │
-│ │ │                 GST INVOICE                                      │   │ │
-│ │ │ Invoice No: JSHS-2026-0215-001                                   │   │ │
-│ │ │ Date: 15-Feb-2026                                                  │   │ │
-│ │ │                                                                    │   │ │
-│ │ │ Customer: ABC Corporation                                          │   │ │
-│ │ │ GSTIN: 27AABCU9603R1ZX                                            │   │ │
-│ │ │                                                                    │   │ │
-│ │ │ Services: Logistics - Electronics Transport                      │   │ │
-│ │ │ Amount: ₹3,150.00                                                 │   │ │
-│ │ │ GST @18%: ₹567.00                                                 │   │ │
-│ │ │ Total: ₹3,717.00                                                  │   │   │ │
-│ │ └─────────────────────────────────────────────────────────────────────┘   │ │
-│ └─────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ### 8.5 Fleet Management Dashboard
 
 **Vehicle & Driver Management**
 
-![Fleet Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/src/assets/company_seal.png)
+![Vehicle Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/vehicle_management.png)
 
 **Fleet Management Features:**
 - **Vehicle Status Tracking**: Real-time monitoring of vehicle location, health, and availability
 - **Driver Performance Analytics**: Rating system based on delivery performance and customer feedback
-- **Maintenance Scheduling**: Automated maintenance alerts and service scheduling
 - **Utilization Metrics**: Fleet efficiency tracking with utilization percentages
-- **Route Optimization**: AI-powered route suggestions for fuel efficiency
-- **Compliance Management**: License expiry alerts and regulatory compliance tracking
-
-**Key Metrics:**
-- Fleet utilization rates, on-time delivery percentages, fuel efficiency tracking
-- Driver ratings, trip counts, earnings calculations
-- Maintenance schedules, vehicle health monitoring, compliance status
-
-*The system provides predictive analytics for maintenance needs and optimal fleet deployment*
 
 ### 8.6 IoT Monitoring Dashboard
 
 **Sensor Data Visualization**
 
-![IoT Monitoring Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/uploads/1767705472359_WIN_20251111_19_25_51_Pro.jpg)
+![IoT Monitoring Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/iot_monitor.png)
 
 **IoT Monitoring Features:**
-- **Temperature Monitoring**: Real-time temperature tracking with configurable thresholds
-- **Humidity Tracking**: Environmental humidity monitoring for sensitive cargo
+- **Temperature & Humidity Monitoring**: Real-time environmental tracking for sensitive cargo
 - **Door Status**: Security monitoring with door open/close detection
-- **Vibration Sensors**: Impact detection for fragile goods protection
-- **GPS Integration**: Location-based sensor data correlation
 - **Alert System**: Automated notifications for threshold breaches
 
-**Sensor Specifications:**
-- Temperature range: -40°C to +85°C with ±0.5°C accuracy
-- Humidity range: 0-100% RH with ±3% accuracy
-- Door sensors with magnetic reed switches
-- Real-time data transmission via 4G/5G connectivity
-- Battery life: 30+ days with solar charging capability
+### 8.7 Customer & Driver Experience
 
-*IoT data is integrated with shipment tracking for complete cargo monitoring and compliance reporting*
+**Customer Dashboard**
 
-## 8. Business Intelligence & Analytics
+![Customer Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_dashboard.png)
+
+**Driver Dashboard**
+
+![Driver Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/driver_dashboard.png)
+
+**Live Payments**
+
+![Live Payments](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_payments.png)
+
+## 9. Business Intelligence & Analytics
+
 ```mermaid
-graph TD
-    A[Business Intelligence] --> B[Operational KPIs]
-    A --> C[Financial KPIs]
-    A --> D[Customer KPIs]
-    A --> E[Driver KPIs]
-    
-    B --> B1[On-time Delivery Rate]
-    B --> B2[Fleet Utilization]
-    B --> B3[Average Delivery Time]
-    B --> B4[Route Efficiency]
-    
-    C --> C1[Revenue per Shipment]
-    C --> C2[Driver Payout Ratio]
-    C --> C3[Payment Collection Rate]
-    C --> C4[Operational Costs]
-    
-    D --> D1[Customer Satisfaction]
-    D --> D2[Repeat Customer Rate]
-    D --> D3[Average Shipment Value]
-    D --> D4[Customer Lifetime Value]
-    
-    E --> E1[Driver Performance Score]
-    E --> E2[Driver Retention Rate]
-    E --> E3[Average Earnings]
-    E --> E4[Utilization Rate]
+mindmap
+  root((Logistics Intelligence))
+    Operational KPIs
+      On-time Delivery
+      Fleet Utilization
+      Route Efficiency
+      Turnaround Time
+    Financial Metrics
+      Revenue/Shipment
+      Driver Payouts
+      Fuel Costs
+      Collection Rate
+    Customer Insights
+      Satisfaction Score
+      Repeat Booking Rate
+      Growth Trends
+    Predictive Analytics
+      Demand Forecasting
+      Delay Risk
+      Optimal Pricing
 ```
 
-### 8.2 Predictive Analytics
+### 9.1 Predictive Analytics
 - **Demand Forecasting**: ML models for shipment volume prediction
 - **Delay Prediction**: Traffic and weather-based delay estimation
 - **Capacity Planning**: Optimal fleet size recommendations
 - **Route Optimization**: AI-driven route suggestions
 
-### 8.3 Reporting Capabilities
+### 9.2 Reporting Capabilities
 - **Automated Reports**: Scheduled report generation and delivery
 - **Custom Dashboards**: User-configurable dashboard layouts
 - **Export Options**: PDF, Excel, CSV export functionality
 - **Real-time Alerts**: Threshold-based notification system
 
-## 9. Deployment & DevOps
+## 10. Deployment & DevOps
 
-### 9.1 Infrastructure Setup
+### 10.1 Infrastructure Setup
 - **Frontend Deployment**: Vercel with GitHub integration
 - **Backend Deployment**: Render with environment-based configuration
 - **Database**: MongoDB Atlas with automated backups
 - **File Storage**: Cloud storage with CDN integration
 
-### 9.2 CI/CD Pipeline
+### 10.2 CI/CD Pipeline
 - **Automated Testing**: Unit and integration test automation
 - **Code Quality**: ESLint and TypeScript validation
 - **Deployment Automation**: One-click deployment processes
 - **Rollback Capabilities**: Version-based rollback system
 
-### 9.3 Monitoring & Maintenance
+### 10.3 Monitoring & Maintenance
 - **Health Checks**: Automated system health monitoring
 - **Error Tracking**: Comprehensive error logging and analysis
 - **Performance Monitoring**: Application performance monitoring tools
 - **Security Updates**: Automated security patch management
 
-## 10. Future Roadmap & Enhancements
+## 11. Future Roadmap & Enhancements
 
-### 10.1 Planned Features
+### 11.1 Planned Features
 - **Mobile Application**: Native React Native apps for iOS and Android
 - **Advanced Route Optimization**: Multi-stop delivery optimization
 - **Machine Learning Enhancement**: Improved AI models for categorization
 - **Blockchain Integration**: Immutable shipment tracking records
 
-### 10.2 Scalability Improvements
+### 11.2 Scalability Improvements
 - **Microservices Migration**: Decomposition into independent services
 - **Event Sourcing**: Implementation of event-driven architecture
 - **Container Orchestration**: Kubernetes deployment for scalability
 - **Edge Computing**: CDN integration for faster content delivery
 
-### 10.3 Business Expansion
+### 11.3 Business Expansion
 - **Multi-language Support**: Internationalization for global markets
 - **White-label Solutions**: Customizable branding for enterprise clients
 - **API Marketplace**: Public API for third-party integrations
 - **Partnership Integrations**: Integration with major e-commerce platforms
 
-## 11. Technical Challenges & Solutions
+## 12. Technical Challenges & Solutions
 
-### 11.1 Data Validation & Legacy Compatibility
+### 12.1 Data Validation & Legacy Compatibility
 **Challenge**: Strict backend validation for phone numbers (`+91` prefix) caused failures when updating legacy records.
 
 **Solution**: Implemented intelligent payload construction in the frontend that auto-detects unformatted numbers and silently prepends the country code before API transmission.
 
-### 11.2 Role-Based Access Control Complexity
+### 12.2 Role-Based Access Control Complexity
 **Challenge**: Complex visibility rules were causing "Forbidden" errors for legitimate users accessing their own data.
 
 **Solution**: Refined middleware and controller logic to correctly handle populated Mongoose documents vs. raw IDs, ensuring users always see data they're entitled to.
 
-### 11.3 Real-time Data Synchronization
+### 12.3 Real-time Data Synchronization
 **Challenge**: Maintaining real-time consistency between multiple concurrent users and IoT devices.
 
 **Solution**: Implemented Socket.io with room-based architecture and optimistic UI updates with rollback capabilities.
 
-## 12. Business Value Proposition
+## 13. Business Value Proposition
 
-### 12.1 Operational Efficiency
+### 13.1 Operational Efficiency
 - **30% Reduction** in manual assignment time through AI-powered auto-assignment
 - **25% Improvement** in fleet utilization through predictive analytics
 - **40% Decrease** in paperwork through automated document generation
 - **50% Faster** shipment booking through AI categorization
 
-### 12.2 Customer Experience
+### 13.2 Customer Experience
 - **Real-time Visibility**: Complete transparency in shipment status
 - **Flexible Operations**: On-demand consignee updates and modifications
 - **Multiple Payment Options**: Pay now or pay later flexibility
 - **Proactive Communication**: Automated notifications for delays and updates
 
-### 12.3 Driver Satisfaction
+### 13.3 Driver Satisfaction
 - **Fair Assignment**: Algorithm-based fair distribution of shipments
 - **Transparent Earnings**: Real-time earnings calculation and history
 - **Easy Documentation**: Simplified POD upload and document management
 - **Performance Recognition**: Rating-based recognition and incentives
 
-### 12.4 Financial Benefits
+### 13.4 Financial Benefits
 - **Reduced Operational Costs**: Automation reduces manual intervention
 - **Improved Cash Flow**: Faster payment collection and automated invoicing
 - **Better Resource Utilization**: Optimal fleet and driver allocation
 - **Scalable Growth**: Platform architecture supports business expansion
 
-## 13. Visual Gallery - Platform Assets & Screenshots
+## 14. Visual Gallery - Comprehensive Asset Overview
 
-### 13.1 Brand Identity & Corporate Assets
+<div align="center">
 
-![JSHS Logistics Corporate Logo](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/frontend/public/logo.png)
+### Platform Core Interfaces
 
-**Brand Identity Elements:**
-- **Primary Logo**: Modern logistics-themed design representing connectivity and movement
-- **Color Scheme**: Professional blue and white palette for trust and reliability
-- **Typography**: Clean, modern fonts optimized for digital and print applications
-- **Iconography**: Consistent icon set across all platform interfaces
+| ![Manager Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/manager_dashboard.png) | ![Driver Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/driver_dashboard.png) |
+|:---:|:---:|
+| *Manager Control Center* | *Driver Operations Hub* |
 
-### 13.2 Digital Asset Management
+| ![Customer Dashboard](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/customer_dashboard.png) | ![Live Tracking](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_shipment_tracking.png) |
+|:---:|:---:|
+| *Customer Portal* | *Real-time GPS Tracking* |
 
-![Manager Digital Signature](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/src/assets/manager_esign.png)
+### Specialized Modules
 
-**C2PA-Compliant Digital Assets:**
-- **Digital Signatures**: Cryptographically secured manager signatures
-- **Company Seals**: Official corporate seals with blockchain verification
-- **Document Templates**: Branded templates for all logistics documentation
-- **Security Features**: C2PA (Coalition for Content Provenance and Authenticity) compliance
+| ![IoT Monitor](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/iot_monitor.png) | ![Analytics](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/analytics.png) |
+|:---:|:---:|
+| *IoT Environmental Monitoring* | *Advanced Business Intelligence* |
 
-### 13.3 Application Development Environment
+| ![Shipment Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/shipments.png) | ![Vehicle Management](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/vehicle_management.png) |
+|:---:|:---:|
+| *Shipment Lifecycle Tracking* | *Fleet & Asset Management* |
 
-![Development Workspace](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/uploads/1767705472359_WIN_20251111_19_25_51_Pro.jpg)
+### Document & Payment Automation
 
-**Development & Testing Infrastructure:**
-- **Modern Development Setup**: Professional development environment with multiple monitors
-- **Code Quality Tools**: Integrated linting, formatting, and testing frameworks
-- **Version Control**: Git-based workflow with comprehensive branching strategy
-- **CI/CD Pipeline**: Automated testing and deployment processes
+| ![GST Invoice](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/automated_gst_invoice.png) | ![Live Payments](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/screenshots/live_payments.png) |
+|:---:|:---:|
+| *Automated GST Billing* | *Secure Payment Integration* |
 
-### 13.4 Corporate Documentation
+</div>
 
-![Official Company Seal](file:///c:/Users/SAHIL/Desktop/Hackathons/Hackathons/Hacknova%2026%20-%20Bharti/JSHS%20LOGISTICS/backend/src/assets/company_seal.png)
-
-**Official Corporate Documentation:**
-- **Company Seal**: Official corporate seal for legal document authentication
-- **Digital Certificates**: SSL/TLS certificates for secure communications
-- **Compliance Documentation**: Regulatory compliance certificates and audits
-- **Brand Guidelines**: Comprehensive brand usage and style guidelines
-
-### 13.5 Technology Stack Visualization
-
-**Frontend Technology Showcase:**
-- **React TypeScript**: Modern component-based architecture with type safety
-- **Tailwind CSS**: Utility-first CSS framework for rapid UI development
-- **Vite Build Tool**: Lightning-fast development and build processes
-- **Leaflet.js**: Interactive mapping and geolocation services
-- **Chart.js**: Data visualization and analytics dashboards
-
-**Backend Technology Stack:**
-- **Express.js**: Robust Node.js web application framework
-- **MongoDB Atlas**: Cloud-native NoSQL database with global distribution
-- **Socket.io**: Real-time bidirectional event-based communication
-- **JWT Authentication**: Secure token-based authentication system
-- **Razorpay Integration**: Seamless payment processing gateway
-
-**Infrastructure & DevOps:**
-- **Vercel Deployment**: Global edge network for optimal performance
-- **MongoDB Cloud**: Managed database services with automatic scaling
-- **Git Version Control**: Collaborative development with branch protection
-- **Automated Testing**: Comprehensive unit, integration, and end-to-end testing
-
-## 14. Conclusion
+## 15. Conclusion
 
 JSHS Logistics stands as a testament to modern logistics platform development, successfully integrating cutting-edge technologies with practical business requirements. The platform demonstrates excellence in:
 
