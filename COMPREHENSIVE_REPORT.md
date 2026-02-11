@@ -1,5 +1,27 @@
 # JSHS Logistics Platform - Comprehensive Technical Report
 
+---
+
+### 🌐 Quick Access
+**[Live Demo](https://jshs-logistics.vercel.app/)** | **[GitHub Repository](https://github.com/sahil-sachdev/jshs-logistics)** | **[Technical Documentation](#1-platform-architecture-overview)**
+
+---
+
+## 📑 Table of Contents
+1. [Platform Architecture Overview](#1-platform-architecture-overview)
+2. [Core Business Workflows](#2-core-business-workflows)
+3. [Key Features & Capabilities](#3-key-features--capabilities)
+4. [User Experience Design](#4-user-experience-design)
+5. [Security & Compliance](#5-security--compliance)
+6. [Performance & Scalability](#6-performance--scalability)
+7. [Integration Capabilities](#7-integration-capabilities)
+8. [Technical Implementation Details](#8-technical-implementation-details)
+9. [API Specifications](#9-api-specifications-selected-endpoints)
+10. [Visual Gallery & Interface Showcase](#10-visual-gallery--interface-showcase)
+11. [Business Intelligence & Analytics](#11-business-intelligence--analytics)
+
+---
+
 ## Executive Summary
 
 JSHS Logistics represents a state-of-the-art, AI-powered logistics management platform that revolutionizes shipment operations through intelligent automation, real-time tracking, and comprehensive fleet management. Built with modern web technologies and deployed on cloud infrastructure, the platform serves three primary user personas: Managers, Drivers, and Customers, each with tailored experiences and functionality.
@@ -62,6 +84,10 @@ graph TB
     A --- P
     E --- P
 ```
+
+> **Note**: This architecture ensures sub-500ms response times for AI categorization and sub-100ms latency for real-time tracking updates.
+
+---
 
 ### 1.2 Technology Stack Analysis
 
@@ -388,107 +414,84 @@ Using **PDFKit**, the system generates legally compliant documents on-the-fly.
 | `GET` | `/api/fleet/vehicles` | List all available vehicles and status | JWT |
 | `POST` | `/api/payments/create-order` | Initialize Razorpay payment session | JWT |
 
-## 10. Application Screenshots & Visual Features
+## 10. Visual Gallery & Interface Showcase
 
-### 10.1 Dashboard Interface
+To provide a clear understanding of the platform's capabilities, this section categorizes real application screenshots by user role and functional area.
 
-**Manager Dashboard Overview**
+### 10.1 Strategic Overviews (Manager Focus)
+
+*Centralized control and operational analytics for fleet supervisors.*
 
 ![Manager Dashboard](./screenshots/manager_dashboard.png)
-
-**Operational Analytics & KPIs**
+*Figure 1: The primary Manager Dashboard showing real-time fleet health and revenue metrics.*
 
 ![Operational Analytics](./screenshots/analytics.png)
+*Figure 2: Advanced analytics view tracking KPIs, delivery success rates, and volume trends.*
 
-**Dashboard Features:**
-- **Fleet Overview**: Real-time vehicle status monitoring with live metrics
-- **Revenue Analytics**: Daily/weekly/monthly revenue tracking with trend indicators
-- **Performance Metrics**: KPI tracking including delivery success rates and customer satisfaction
-- **Interactive Maps**: Live vehicle positioning with Leaflet.js integration
-- **Quick Actions**: One-click access to shipment creation, driver management, and reporting
+![Fleet Monitoring](./screenshots/vehicle_management.png)
+*Figure 3: Vehicle management portal with live status tracking and health monitoring.*
 
-### 10.2 Shipment Creation Interface
+---
 
-**AI-Powered Shipment Creation**
+### 10.2 Shipment & Cargo Operations (Customer Focus)
 
-![Shipment Creation Interface](./screenshots/customer_shipment_booking.png)
-![Alternative View](./screenshots/customer_shipment_booking2.png)
-![Booking Form](./screenshots/customer_shipmment_booking.png)
+*AI-assisted booking and shipment management for high efficiency.*
+
+![Booking Interface](./screenshots/customer_shipment_booking.png)
+*Figure 4: The AI-powered booking engine with automatic goods categorization.*
+
+![Alternative Booking View](./screenshots/customer_shipment_booking2.png)
+*Figure 5: Secondary booking view optimized for quick entry and bulk orders.*
+
 ![Shipment Details](./screenshots/shipments.png)
+*Figure 6: Detailed shipment lifecycle view with real-time status updates.*
 
-**Key Features:**
-- **AI Image Recognition**: Automatic goods categorization using Google Gemini
-- **Smart Pricing**: Dynamic pricing based on distance, weight, and category
-- **Multi-modal Input**: Text description, image upload, or voice input
-- **Real-time Validation**: Instant validation of addresses and availability
+---
 
-### 10.3 Real-time Tracking Interface
+### 10.3 Real-time Tracking & IoT Data
 
-**Live Shipment Tracking**
+*Precision monitoring of goods in transit using GPS and sensors.*
 
-![Live Tracking Interface](./screenshots/live_shipment_tracking.png)
-![Driver Side Tracking](./screenshots/driver_side_shipment_tracking.png)
+![Live Tracking](./screenshots/live_shipment_tracking.png)
+*Figure 7: Customer-facing live tracking interface with Leaflet.js map integration.*
 
-**Tracking Features:**
-- **Real-time GPS Updates**: 5-second interval location tracking with Leaflet.js maps
-- **Predictive ETA**: Machine learning-powered arrival time predictions
-- **Route Visualization**: Interactive route lines with traffic-aware navigation
-- **IoT Integration**: Temperature, humidity, and door status monitoring
+![IoT Sensor Monitoring](./screenshots/iot_monitor.png)
+*Figure 8: Real-time sensor data visualization (Temperature, Humidity, Door Status).*
 
-### 10.4 Document Generation Interface
+---
 
-**Automated Document Templates**
+### 10.4 Driver Mobility & Field Verification
 
-![Document Center](./screenshots/documents_page.png)
-
-![GST Invoice Sample](./screenshots/automated_gst_invoice.png)
-
-**Document Features:**
-- **PDF Generation**: Server-side PDF creation using PDFKit
-- **Digital Signatures**: Manager e-signature and company seal integration
-- **Compliance**: GST-compliant formatting and legal requirements
-
-### 10.5 Fleet Management Dashboard
-
-**Vehicle & Driver Management**
-
-![Vehicle Management](./screenshots/vehicle_management.png)
-![Driver Onboarding](./screenshots/driver_onboarding.png)
-![Vehicle Onboarding](./screenshots/vehicle_onboardsing.png)
-
-**Fleet Management Features:**
-- **Vehicle Status Tracking**: Real-time monitoring of vehicle location, health, and availability
-- **Driver Performance Analytics**: Rating system based on delivery performance and customer feedback
-- **Utilization Metrics**: Fleet efficiency tracking with utilization percentages
-
-### 10.6 IoT Monitoring Dashboard
-
-**Sensor Data Visualization**
-
-![IoT Monitoring Dashboard](./screenshots/iot_monitor.png)
-
-**IoT Monitoring Features:**
-- **Temperature & Humidity Monitoring**: Real-time environmental tracking for sensitive cargo
-- **Door Status**: Security monitoring with door open/close detection
-- **Alert System**: Automated notifications for threshold breaches
-
-### 10.7 Customer & Driver Experience
-
-**Customer Dashboard**
-
-![Customer Dashboard](./screenshots/customer_dashboard.png)
-![Customer Approvals](./screenshots/customer_approvals.png)
-
-**Driver Dashboard**
+*Simplified mobile-first experience for drivers on the road.*
 
 ![Driver Dashboard](./screenshots/driver_dashboard.png)
-![Drive Mode](./screenshots/drive_mode.png)
+*Figure 9: Driver-centric overview of assigned tasks and daily earnings.*
+
+![Active Drive Mode](./screenshots/drive_mode.png)
+*Figure 10: High-focus "Drive Mode" providing navigation and route updates.*
+
 ![Delivery Verification](./screenshots/deliver_verification.png)
-![Driver Guide](./screenshots/driver_guide.png)
+*Figure 11: Secure Proof of Delivery (POD) capture with signature and GPS timestamp.*
 
-**Live Payments**
+---
 
-![Live Payments](./screenshots/live_payments.png)
+### 10.5 Administrative & Financial Operations
+
+*Back-office tools for documentation, payments, and onboarding.*
+
+![Document Center](./screenshots/documents_page.png)
+*Figure 12: Centralized repository for all generated invoices and manifests.*
+
+![Automated GST Invoice](./screenshots/automated_gst_invoice.png)
+*Figure 13: Sample of a legally compliant, server-side generated GST invoice.*
+
+![Payment Processing](./screenshots/live_payments.png)
+*Figure 14: Secure checkout flow integrated with Razorpay.*
+
+![Driver Onboarding](./screenshots/driver_onboarding.png)
+*Figure 15: Streamlined onboarding process for new logistics partners.*
+
+---
 
 ## 11. Business Intelligence & Analytics
 
